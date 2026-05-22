@@ -1,0 +1,23 @@
+# Local virtual environments
+.venv/
+venv/
+ENV/
+
+# Python caching
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Local databases / Vector stores
+chroma_db/
+*.db
+
+# Environment variables and secrets (CRITICAL)
+.env
+.env.local
+.env.*
+!.env.example
+
+# Operating system files
+.DS_Store
+Thumbs.db

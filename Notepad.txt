@@ -1,0 +1,27 @@
+🔒 Absolute Data Privacy + Local AI: I built a secure, local RAG chatbot!
+
+With data privacy concerns growing, I wanted to see how far I could push a fully local Retrieval-Augmented Generation (RAG) assistant running entirely on my own hardware.
+
+The result? A premium, zero-cloud-dependency RAG Chatbot powered by Python, Flask, Ollama, and ChromaDB.
+
+Here are the key engineering challenges I focused on:
+
+1. 📚 Local Semantic Search (RAG):
+Using local `nomic-embed-text` vectors via Ollama and persisting them into ChromaDB. I implemented an adaptive chunker that dynamically tunes chunk sizes and overlap based on document length to maximize context relevance.
+
+2. 🧠 Cognitive Long-Term Memory:
+The bot automatically extracts personal facts dynamically from conversation turns into a persistent JSON schema. To prevent context window bloat, it runs a rolling summarizer on older conversation history while keeping recent turns verbatim.
+
+3. 🛡️ Defense-in-Depth File Security:
+Handling user uploads locally comes with server vulnerabilities. To prevent Directory Traversal attacks (e.g. `../../etc/passwd` injection), I implemented deterministic SHA-256 filename obfuscation on the filesystem while keeping the database logical key human-readable. It is paired with a strict 10MB limit enforced on both client and server.
+
+4. 🎨 Premium UI/UX:
+A fully responsive CSS grid/flexbox interface built from scratch featuring a sleek glassmorphic dark theme, drag-and-drop file indexing overlays, and live status context pills.
+
+🛠️ Tech Stack: Python | Flask | ChromaDB | Ollama (DeepSeek-R1 / Llama 3.2) | Vanilla CSS & JS
+
+Running everything locally means zero API costs, zero data leakages, and complete ownership of the knowledge pipeline.
+
+Check out the code here: [Insert your GitHub Link]
+
+#AI #RAG #LocalLLM #Python #WebDevelopment #DataPrivacy #SoftwareEngineering #ChromaDB #Ollama
