@@ -27,11 +27,17 @@ A premium, fully local **Retrieval-Augmented Generation (RAG)** chatbot and AI a
 * Drag-and-drop file indexing overlay.
 * Dynamic context status pills showing active systems (System prompt, Memory state, RAG status, Active model).
 * Sleek modal dialogues for critical action confirmations.
+* **Claude AI-Style Chatbox:** Features a refined, cohesive chatbox layout with a borderless user-input textarea on top and an unified actions toolbar on the bottom (bottom-left `+` file uploader, bottom-right model dropdown pill, voice toggle, and send button).
 
 ### 5. 🎙️ Premium Offline Voice Integration (STT & TTS)
 * **Local Speech-to-Text (STT):** Records voice inputs directly in-browser using a custom `ScriptProcessorNode` resampler, compiles them into a standard 16-bit Mono PCM WAV file at `16000` Hz, and transcribes them fully offline via a local **OpenAI Whisper** tiny model (supporting GPU CUDA acceleration).
 * **Real-Time Speech Synthesis (TTS):** Parses streamed response chunks dynamically on sentence boundaries (`.`, `?`, `!`) and feeds them into a voice synthesis queue (`SpeechSynthesisUtterance`). Readback starts *during active token generation* so you don't have to wait for the complete answer.
 * **Intelligent Lifecycles:** Features clean SpeechSynthesis garbage collection handling in Google Chrome, custom Whisper silence-hallucination filters, visual pulsing/recording animations, a quick-mute header toggle, and secure microphone shutdown safeguards on error.
+
+### 6. 🏗️ Modern Modular Backend Architecture
+* **Separation of Concerns:** Deconstructs the monolithic Flask layout into robust, clean logic modules for vectors indexation (`services/rag.py`), offline speech transcribing (`services/audio.py`), and Ollama inference memory extraction (`services/cognitive.py`).
+* **Decoupled Configuration & Models:** Centralizes system configuration, LLM parameters, and system prompts in `config.py`, separating databases ORM models completely into `models.py`.
+* **Dynamic Blueprints Routing:** Utilizes Flask Blueprints routing to bind modular routes dynamically (`routes/auth.py`, `routes/documents.py`, `routes/chat.py`), leaving `app.py` as an ultra-lightweight startup orchestrator (under 70 lines of code).
 
 ---
 
@@ -48,9 +54,10 @@ A premium, fully local **Retrieval-Augmented Generation (RAG)** chatbot and AI a
 ### Prerequisites
 * [Python 3.9+](https://www.python.org/downloads/) installed.
 * [Ollama](https://ollama.com) installed and running locally.
+* [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running.
 
 ### 1. Set Up Ollama Models
-Pull your favorite local LLMs and the embedding model:
+Pull the dedicated embedding model and your preferred LLMs:
 ```bash
 # Pull the dedicated embedding model
 ollama pull nomic-embed-text
@@ -60,24 +67,50 @@ ollama pull llama3.2
 ollama pull deepseek-r1:latest
 ```
 
-### 2. Clone & Install Dependencies
-Clone the repository, set up a virtual environment, and install dependencies:
-```bash
+### 2. Setup Virtual Environment & Dependencies
+Set up your virtual environment and install all python dependencies:
+```powershell
 # Create and activate virtual environment
 python -m venv .venv
-.venv\Scripts\activate       # On Windows
+.venv\Scripts\activate       # On Windows (PowerShell)
 source .venv/bin/activate    # On Linux/macOS
 
 # Install dependencies
 pip install -r requirements.txt
 ```
 
-### 3. Run the App
-Start the Flask local development server:
-```bash
-python app.py
+### 3. Spin Up the Database
+Start the persistent local PostgreSQL database inside a Docker container:
+```powershell
+docker compose up -d
 ```
-Open **`http://localhost:5000`** (or your local IP address `http://192.168.x.x:5000` to share with other devices on your home/office network!).
+*(This maps host port `5433` to container port `5432` to ensure no conflict with any native Windows PostgreSQL services running on port `5432`.)*
+
+### 4. Run the Application
+
+#### 🚀 Option A: Production Mode (WSGI Server) - *Recommended*
+Run the production-ready high-concurrency **Waitress** WSGI server (fully optimized for Windows):
+* **On Windows (PowerShell):**
+  ```powershell
+  $env:PYTHONUTF8=1; waitress-serve --port=5000 wsgi:app
+  ```
+* **On Windows (CMD):**
+  ```cmd
+  set PYTHONUTF8=1 && waitress-serve --port=5000 wsgi:app
+  ```
+
+#### 🛠️ Option B: Development Mode (Flask Dev Server)
+Run the Flask server with debug mode enabled (recommended for code development/testing only):
+* **On Windows (PowerShell):**
+  ```powershell
+  $env:PYTHONUTF8=1; python app.py
+  ```
+* **On Windows (CMD):**
+  ```cmd
+  set PYTHONUTF8=1 && python app.py
+  ```
+
+Open **`http://localhost:5000`** in your browser to start chatting!
 
 ---
 
@@ -91,11 +124,26 @@ Due to browser security guidelines, **microphone access (`getUserMedia`) is stri
 ---
 
 ## 📂 Project Structure
-```
-├── app.py               # Flask application with security and context managers
+
+```text
+├── app.py               # Lightweight bootstrapper & Blueprint registry
+├── config.py            # Central configurations, model definitions, and system prompts
+├── models.py            # SQLAlchemy database schemas (User, Conversation, ChatMessage, UserMemory)
 ├── requirements.txt     # Python dependencies
+│
+├── services/            # Decoupled business and AI logic engines
+│   ├── rag.py           # ChromaDB client connection, document ingestion, and cosine queries
+│   ├── audio.py         # Floating mono PCM WAV builder and Whisper offline STT transcribers
+│   └── cognitive.py     # Ollama generation stream, persistent facts memory, and rolling summary
+│
+├── routes/              # Flask Blueprint HTTP routes
+│   ├── auth.py          # /api/register, /api/login, /api/logout, /api/me (JWT token auth)
+│   ├── documents.py     # /api/documents, /api/documents/upload, /api/documents/delete
+│   └── chat.py          # /api/chat stream, /api/clear, /api/transcribe, /api/models, /api/memory
+│
 ├── templates/
-│   └── index.html       # Single-page glassmorphic UI & frontend validators
+│   └── index.html       # Single-page premium glassmorphic UI with Claude-style chat input panel
+│
 ├── uploads/             # Obfuscated cryptographic document storage (Safe disk)
 └── chroma_db/           # Persistent ChromaDB vector database index
 ```

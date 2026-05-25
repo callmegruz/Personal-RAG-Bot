@@ -12,6 +12,9 @@ __pycache__/
 chroma_db/
 *.db
 
+# User Uploaded Documents
+uploads/
+
 # Environment variables and secrets (CRITICAL)
 .env
 .env.local
