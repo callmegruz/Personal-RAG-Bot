@@ -23,10 +23,15 @@ A premium, fully local **Retrieval-Augmented Generation (RAG)** chatbot and AI a
 * **Strict Upload Protection:** Implements an immediate **10MB upload limit** checked on both the frontend (browser toast notification) and backend (Flask request size constraints with graceful `413` JSON handler).
 
 ### 4. 🎨 Premium Glassmorphic UI/UX
-* Harmonious dark theme using CSS custom tokens and glassmorphism.
+* Harmonious dark theme using CSS custom tokens and glassmorphism with two dynamic presets (Emerald and Magma themes).
 * Drag-and-drop file indexing overlay.
 * Dynamic context status pills showing active systems (System prompt, Memory state, RAG status, Active model).
 * Sleek modal dialogues for critical action confirmations.
+
+### 5. 🎙️ Premium Offline Voice Integration (STT & TTS)
+* **Local Speech-to-Text (STT):** Records voice inputs directly in-browser using a custom `ScriptProcessorNode` resampler, compiles them into a standard 16-bit Mono PCM WAV file at `16000` Hz, and transcribes them fully offline via a local **OpenAI Whisper** tiny model (supporting GPU CUDA acceleration).
+* **Real-Time Speech Synthesis (TTS):** Parses streamed response chunks dynamically on sentence boundaries (`.`, `?`, `!`) and feeds them into a voice synthesis queue (`SpeechSynthesisUtterance`). Readback starts *during active token generation* so you don't have to wait for the complete answer.
+* **Intelligent Lifecycles:** Features clean SpeechSynthesis garbage collection handling in Google Chrome, custom Whisper silence-hallucination filters, visual pulsing/recording animations, a quick-mute header toggle, and secure microphone shutdown safeguards on error.
 
 ---
 
@@ -73,6 +78,15 @@ Start the Flask local development server:
 python app.py
 ```
 Open **`http://localhost:5000`** (or your local IP address `http://192.168.x.x:5000` to share with other devices on your home/office network!).
+
+---
+
+## 🎙️ Microphone & Secure Context Notice
+
+Due to browser security guidelines, **microphone access (`getUserMedia`) is strictly restricted to Secure Contexts** (i.e., `localhost`, `127.0.0.1`, or `https://`).
+* If you access the server locally at **`http://localhost:5000`**, the voice features will work flawlessly.
+* If you access the app over a local network IP (e.g., `http://192.168.1.225:5000`) on a remote device, the browser will automatically disable the microphone. Access the app via `localhost` or configure an SSL proxy (HTTPS) to enable remote mic capture.
+* Toggling the **VOICE ON** button triggers a quick audio test speech to register browser-enforced **user gestures** so that streaming synthesis works smoothly.
 
 ---
 

@@ -7,6 +7,15 @@ import re
 import hashlib
 from concurrent.futures import ThreadPoolExecutor
 
+try:
+    import speech_recognition as sr
+    HAS_SR = True
+except Exception as e:
+    import traceback
+    print("⚠️ Error importing speech_recognition:")
+    traceback.print_exc()
+    HAS_SR = False
+
 # ── PDF extraction ─────────────────────────────────────────────────────────────
 try:
     import pypdf
@@ -305,11 +314,9 @@ def list_documents() -> list:
 
 
 def delete_document(filename: str):
-    results       = collection.get(include=["metadatas"])
-    ids_to_delete = [rid for rid, meta in zip(results["ids"], results["metadatas"])
-                     if meta.get("source") == filename]
-    if ids_to_delete:
-        collection.delete(ids=ids_to_delete)
+    results = collection.get(where={"source": filename})
+    if results and results.get("ids"):
+        collection.delete(ids=results["ids"])
 
 
 def retrieve(query: str, top_k: int = TOP_K) -> list:
@@ -426,9 +433,23 @@ def build_messages(session: dict, memory: dict, rag_chunks: list) -> list:
 
 @app.route("/")
 def index():
+    theme = request.args.get("theme")
+    
+    if theme in ("classic", "fire"):
+        models = get_installed_models()
+        default = models[0] if models else DEFAULT_MODEL
+        response = Response(render_template("index.html", models=models, default_model=default, theme=theme))
+        response.set_cookie("theme", theme, max_age=30*24*60*60)
+        return response
+
+    cookie_theme = request.cookies.get("theme", "fire")
     models = get_installed_models()
     default = models[0] if models else DEFAULT_MODEL
-    return render_template("index.html", models=models, default_model=default)
+    
+    # Ensure cookie is set even on first load
+    response = Response(render_template("index.html", models=models, default_model=default, theme=cookie_theme))
+    response.set_cookie("theme", cookie_theme, max_age=30*24*60*60)
+    return response
 
 
 @app.route("/api/models")
@@ -487,6 +508,41 @@ def remove_document():
     if os.path.exists(fp):
         os.remove(fp)
     return jsonify({"status": "deleted"})
+
+
+@app.route("/api/transcribe", methods=["POST"])
+def transcribe_audio():
+    if not HAS_SR:
+        return jsonify({"error": "Voice recognition dependencies are not available. Please ensure PyTorch and SpeechRecognition are installed."}), 500
+        
+    if "file" not in request.files:
+        return jsonify({"error": "No audio file provided"}), 400
+        
+    file = request.files["file"]
+    if not file.filename:
+        return jsonify({"error": "Empty audio filename"}), 400
+        
+    temp_name = f"temp_{uuid.uuid4().hex}.wav"
+    filepath = os.path.join(app.config["UPLOAD_FOLDER"], temp_name)
+    file.save(filepath)
+    
+    try:
+        r = sr.Recognizer()
+        with sr.AudioFile(filepath) as source:
+            audio_data = r.record(source)
+            
+        # Transcribe locally using Whisper tiny model.
+        # Explicitly lock transcription to English to prevent language confusion.
+        result = r.recognize_whisper(audio_data, model="tiny", language="english")
+        
+        if os.path.exists(filepath):
+            os.remove(filepath)
+            
+        return jsonify({"text": result.strip()})
+    except Exception as e:
+        if os.path.exists(filepath):
+            os.remove(filepath)
+        return jsonify({"error": f"Transcription failed: {str(e)}"}), 500
 
 
 def should_use_rag(query: str, model: str) -> bool:
@@ -632,4 +688,4 @@ if __name__ == "__main__":
     mem = load_memory()
     if mem:
         print(f"🧠 Loaded {len(mem)} remembered fact(s)")
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    app.run(debug=True, host="0.0.0.0", port=5000, threaded=True)

@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
-    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Outfit:wght@400;500;600;700;800&display=swap"
     rel="stylesheet" />
   <style>
     *,
@@ -19,7 +19,7 @@
       padding: 0;
     }
 
-    :root {
+    :root, body.theme-classic {
       --bg: #07080c;
       --surface-blur: rgba(13, 15, 24, 0.75);
       --surface: #0d0f17;
@@ -53,6 +53,40 @@
       --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
+    body.theme-fire {
+      --bg: #070302;
+      --surface-blur: rgba(18, 8, 6, 0.45);
+      --surface: #120806;
+      --surface2: #1e0a05;
+      --surface-card: rgba(30, 10, 5, 0.35);
+      --border: rgba(255, 77, 23, 0.15);
+      --border-hover: rgba(255, 110, 50, 0.35);
+      --accent: #ff521d; /* Radiant Crimson-Orange */
+      --accent-dim: rgba(255, 82, 29, 0.12);
+      --accent-glow: rgba(255, 82, 29, 0.55);
+      --text: #fdfaf9;
+      --muted: #f3c2b5;
+      --text-muted: #9e756c;
+
+      --user-bg: rgba(255, 82, 29, 0.08);
+      --user-border: rgba(255, 82, 29, 0.28);
+      --bot-bg: rgba(24, 8, 4, 0.55);
+      --bot-border: rgba(255, 255, 255, 0.05);
+
+      --danger: #ff3333;
+      --danger-dim: rgba(255, 51, 51, 0.12);
+      --warning: #ffb703; /* Gold */
+      --warning-dim: rgba(255, 183, 3, 0.12);
+      --info: #ff9f1c; /* Amber */
+      --info-dim: rgba(255, 159, 28, 0.12);
+      --purple: #d90429; /* Crimson */
+      --purple-dim: rgba(217, 4, 41, 0.12);
+
+      --r: 12px;
+      --r-sm: 8px;
+      --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
     ::-webkit-scrollbar {
       width: 5px;
       height: 5px;
@@ -71,10 +105,17 @@
       background: rgba(255, 255, 255, 0.2);
     }
 
+    body.theme-fire ::-webkit-scrollbar-thumb {
+      background: rgba(255, 82, 29, 0.15);
+    }
+
+    body.theme-fire ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 82, 29, 0.35);
+    }
+
     body {
       font-family: 'Plus Jakarta Sans', sans-serif;
       background: var(--bg);
-      background-image: radial-gradient(circle at 50% 50%, #111424 0%, #07080c 100%);
       color: var(--text);
       height: 100vh;
       height: 100dvh;
@@ -82,6 +123,80 @@
       flex-direction: column;
       overflow: hidden;
       -webkit-font-smoothing: antialiased;
+    }
+
+    body.theme-classic {
+      background-image: radial-gradient(circle at 50% 50%, #111424 0%, #07080c 100%);
+    }
+
+    body.theme-fire {
+      background-image: radial-gradient(circle at center, #1c0702 0%, #060201 100%);
+    }
+
+    /* Liquid Background for Fire Theme */
+    .liquid-bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      z-index: -1;
+      display: none;
+    }
+
+    body.theme-fire .liquid-bg {
+      display: block;
+    }
+
+    .blob {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: 0.35;
+      mix-blend-mode: screen;
+      animation: float 25s infinite ease-in-out;
+    }
+
+    .blob-1 {
+      width: 550px;
+      height: 550px;
+      background: radial-gradient(circle, #ff2300 0%, transparent 70%);
+      top: -15%;
+      left: -10%;
+      animation-duration: 32s;
+    }
+
+    .blob-2 {
+      width: 480px;
+      height: 480px;
+      background: radial-gradient(circle, #ff9f1c 0%, transparent 70%);
+      bottom: -5%;
+      right: -5%;
+      animation-duration: 24s;
+      animation-delay: -6s;
+    }
+
+    .blob-3 {
+      width: 650px;
+      height: 650px;
+      background: radial-gradient(circle, #b7094c 0%, transparent 70%);
+      top: 35%;
+      left: 35%;
+      animation-duration: 40s;
+      animation-delay: -12s;
+    }
+
+    @keyframes float {
+      0%, 100% {
+        transform: translate(0, 0) scale(1) rotate(0deg);
+      }
+      33% {
+        transform: translate(100px, 60px) scale(1.2) rotate(120deg);
+      }
+      66% {
+        transform: translate(-70px, 140px) scale(0.85) rotate(240deg);
+      }
     }
 
     /* Header */
@@ -1202,10 +1317,209 @@
     .animate-spin {
       animation: spin 1s linear infinite;
     }
+
+    #sidebar-overlay {
+      display: none;
+    }
+
+    /* Mobile responsive media queries */
+    @media (max-width: 768px) {
+      /* Compact Header */
+      header {
+        padding: 8px 12px;
+        gap: 6px;
+      }
+      
+      .logo span {
+        font-size: 11px;
+      }
+      
+      .logo svg {
+        width: 15px;
+        height: 15px;
+      }
+      
+      .hdr-right {
+        gap: 6px;
+      }
+      
+      .model-wrap {
+        padding: 0 8px;
+      }
+      
+      select {
+        min-width: 90px;
+        font-size: 12px;
+        padding: 6px 18px 6px 4px;
+        height: 32px;
+      }
+      
+      .model-wrap::after {
+        right: 8px;
+        width: 5px;
+        height: 5px;
+      }
+      
+      .btn {
+        padding: 8px 10px;
+        gap: 0;
+      }
+      
+      .btn span {
+        display: none;
+      }
+      
+      /* Mobile Backdrop Overlay */
+      #sidebar-overlay {
+        display: none;
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(5, 5, 8, 0.65);
+        backdrop-filter: blur(3px);
+        -webkit-backdrop-filter: blur(3px);
+        z-index: 99;
+        opacity: 0;
+        transition: opacity 0.25s ease;
+      }
+
+      /* Slide-in Overlay Sidebar */
+      #sidebar {
+        position: absolute !important;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 280px !important;
+        min-width: 280px !important;
+        transform: translateX(0);
+        z-index: 100;
+        box-shadow: 5px 0 25px rgba(0, 0, 0, 0.5);
+        border-right: 1px solid var(--border);
+      }
+      
+      #sidebar.hidden {
+        transform: translateX(-100%);
+        width: 280px !important;
+        min-width: 280px !important;
+        border-right: 1px solid transparent;
+      }
+      
+      /* Sidebar toggle floating button placement */
+      .sidebar-toggle-floating {
+        left: 280px !important;
+        z-index: 101;
+      }
+      
+      #sidebar.hidden + .sidebar-toggle-floating {
+        left: 10px !important;
+      }
+      
+      /* Chat Column */
+      #messages {
+        padding: 16px 12px;
+        gap: 14px;
+      }
+      
+      .message {
+        gap: 8px;
+        max-width: 100%;
+      }
+      
+      .avatar {
+        width: 28px;
+        height: 28px;
+      }
+      
+      .avatar svg {
+        width: 12px;
+        height: 12px;
+      }
+      
+      .bubble {
+        font-size: 13.5px;
+        padding: 10px 14px;
+        max-width: 88%;
+      }
+      
+      .bubble pre {
+        padding: 8px;
+        font-size: 11.5px;
+      }
+      
+      .bubble code {
+        font-size: 11px;
+      }
+      
+      /* Footer */
+      footer {
+        padding: 10px 12px 16px;
+      }
+      
+      .input-row {
+        padding: 6px 10px;
+        border-radius: 14px;
+      }
+      
+      textarea {
+        font-size: 13.5px;
+        min-height: 32px;
+        padding: 6px 4px;
+      }
+      
+      .btn-send {
+        width: 32px;
+        height: 32px;
+      }
+      
+      .btn-upload {
+        width: 32px;
+        height: 32px;
+      }
+      
+      .hint {
+        font-size: 9px;
+        margin-top: 4px;
+      }
+      
+      /* RAG Context bar compacting */
+      #ctx-bar {
+        padding: 6px 12px;
+        gap: 6px;
+      }
+      
+      .pill {
+        font-size: 8.5px;
+        padding: 2px 8px;
+      }
+    }
+    .btn-upload#mic-btn.recording {
+      color: var(--accent) !important;
+      background: var(--accent-dim) !important;
+      box-shadow: 0 0 12px var(--accent-glow) !important;
+      animation: pulseMic 1.2s ease-in-out infinite;
+    }
+
+    @keyframes pulseMic {
+      0%, 100% {
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(1.08);
+      }
+    }
   </style>
 </head>
 
-<body>
+<body class="theme-{{ theme }}">
+
+  <!-- Background Liquid Canvas -->
+  <div class="liquid-bg">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+  </div>
 
   <!-- Full-screen drag overlay -->
   <div id="drag-overlay"
@@ -1261,6 +1575,25 @@
         </svg>
         <span>DOCS &amp; MEMORY</span>
       </button>
+      <div class="model-wrap">
+        <svg class="model-icon-svg" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+          <path d="M2 12h20"></path>
+        </svg>
+        <select id="theme-select" onchange="onThemeChange()">
+          <option value="classic" {% if theme == "classic" %}selected{% endif %}>Emerald Theme</option>
+          <option value="fire" {% if theme == "fire" %}selected{% endif %}>Magma Theme</option>
+        </select>
+      </div>
+      <button class="btn active" id="tts-btn" onclick="toggleMute()" title="Mute Voice Readback">
+        <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+          <path id="tts-wave-1" d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+          <path id="tts-wave-2" d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+        </svg>
+        <span>VOICE ON</span>
+      </button>
       <button class="btn danger" onclick="clearChat()">
         <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none">
           <polyline points="3 6 5 6 21 6"></polyline>
@@ -1274,6 +1607,8 @@
   </header>
 
   <div class="main">
+    <!-- Sidebar backdrop overlay for mobile viewports -->
+    <div id="sidebar-overlay" onclick="toggleSidebar()"></div>
     <div id="sidebar">
       <div class="sb-section">
         <div class="sb-title">
@@ -1379,6 +1714,14 @@
         <div class="input-row">
           <textarea id="user-input" placeholder="Ask anything…" rows="1" onkeydown="handleKey(event)"
             oninput="autoResize(this)"></textarea>
+          <button class="btn-upload" id="mic-btn" onclick="toggleRecord()" title="Record Voice">
+            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none">
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+              <line x1="12" y1="19" x2="12" y2="23"></line>
+              <line x1="8" y1="23" x2="16" y2="23"></line>
+            </svg>
+          </button>
           <button class="btn-upload" id="upload-btn" onclick="document.getElementById('file-input').click()"
             title="Upload Document">
             <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none">
@@ -1428,10 +1771,19 @@
 
   <script>
     const SESSION_ID = Math.random().toString(36).slice(2);
-    let isStreaming = false, sidebarOn = true, msgCount = 0;
+    let isStreaming = false, sidebarOn = window.innerWidth >= 768, msgCount = 0;
+
+    // Set up initial responsive sidebar visibility
+    if (!sidebarOn) {
+      document.getElementById('sidebar').classList.add('hidden');
+      document.getElementById('sb-btn').classList.remove('active');
+    }
     let currentAbortController = null;
     const modelUsage = {};
-    const MODEL_COLORS = ['#8b5cf6', '#10b981', '#3b82f6', '#f59e0b', '#ec4899', '#f43f5e'];
+    const activeTheme = "{{ theme }}";
+    const MODEL_COLORS = activeTheme === 'fire'
+      ? ['#ff3b00', '#ffb703', '#d90429', '#ff7b00', '#f72585', '#b7094c']
+      : ['#8b5cf6', '#10b981', '#3b82f6', '#f59e0b', '#ec4899', '#f43f5e'];
     const modelColor = {}; let colorIdx = 0;
     function getModelColor(n) { if (!modelColor[n]) modelColor[n] = MODEL_COLORS[colorIdx++ % MODEL_COLORS.length]; return modelColor[n]; }
 
@@ -1439,6 +1791,33 @@
       const m = document.getElementById('model-select').value;
       document.getElementById('pill-model').textContent = m;
       fetch('/api/switch-model', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ session_id: SESSION_ID, model: m }) });
+    }
+
+    function onThemeChange() {
+      const t = document.getElementById('theme-select').value;
+      
+      // Update body class dynamically
+      if (t === 'fire') {
+        document.body.classList.remove('theme-classic');
+        document.body.classList.add('theme-fire');
+        // Update color palette swatches
+        MODEL_COLORS.length = 0;
+        MODEL_COLORS.push('#ff3b00', '#ffb703', '#d90429', '#ff7b00', '#f72585', '#b7094c');
+      } else {
+        document.body.classList.remove('theme-fire');
+        document.body.classList.add('theme-classic');
+        // Update color palette swatches
+        MODEL_COLORS.length = 0;
+        MODEL_COLORS.push('#8b5cf6', '#10b981', '#3b82f6', '#f59e0b', '#ec4899', '#f43f5e');
+      }
+      
+      // Clear model colors cache and redraw models list
+      for (const k in modelColor) delete modelColor[k];
+      colorIdx = 0;
+      updateModelHistory('');
+      
+      // Save it to a 30-day cookie so backend serves this theme next time
+      document.cookie = `theme=${t};path=/;max-age=${30*24*60*60}`;
     }
 
     // Poll for newly pulled models every 30s
@@ -1495,6 +1874,24 @@
       sidebarOn = !sidebarOn;
       document.getElementById('sidebar').classList.toggle('hidden', !sidebarOn);
       document.getElementById('sb-btn').classList.toggle('active', sidebarOn);
+
+      // Handle smooth backdrop animation on mobile devices
+      const overlay = document.getElementById('sidebar-overlay');
+      if (overlay) {
+        if (sidebarOn && window.innerWidth <= 768) {
+          overlay.style.display = 'block';
+          overlay.offsetHeight; // Force DOM reflow to trigger transition animation smoothly
+          overlay.style.opacity = '1';
+        } else {
+          overlay.style.opacity = '0';
+          setTimeout(() => {
+            // Ensure sidebar is still closed when animation ends
+            if (!sidebarOn || window.innerWidth > 768) {
+              overlay.style.display = 'none';
+            }
+          }, 250);
+        }
+      }
     }
 
     async function refreshDocs() {
@@ -1816,6 +2213,14 @@
         }
         return;
       }
+      
+      // Reset active Speech Synthesis readback
+      window.speechSynthesis.cancel();
+      speechQueue = [];
+      isSpeaking = false;
+      activeUtterance = null;
+      lastSentenceIndex = 0;
+
       const input = document.getElementById('user-input');
       const msg = input.value.trim(); if (!msg) return;
       const model = document.getElementById('model-select').value;
@@ -1857,6 +2262,10 @@
               const color = getModelColor(model);
               const tag = `<span class="model-tag" style="border-color:${color};color:${color};background:${color}18">${esc(model)}</span><br>`;
               botBubble.innerHTML = tag + parseMarkdown(botText) + (data.done ? '' : '<span class="cursor"></span>');
+              
+              // Process Speech Synthesis dynamically sentence-by-sentence
+              processStreamingTTS(botText, data.done);
+
               if (data.done) {
                 if (sourcesData?.sources?.length) {
                   const sd = document.createElement('div');
@@ -1881,6 +2290,9 @@
             }
           }
         }
+        
+        // Finalize speech synthesis for any leftover sentence
+        processStreamingTTS(botText, true);
       } catch (err) {
         if (err.name === 'AbortError') {
           // Remove streaming cursor
@@ -1888,6 +2300,12 @@
           if (cursor) cursor.remove();
           
           botBubble.innerHTML += `<div style="font-size:11px;color:var(--muted);font-style:italic;margin-top:5px;border-top:1px solid var(--border);padding-top:4px;">Generation stopped by user.</div>`;
+          
+          // Cancel active speech playback
+          window.speechSynthesis.cancel();
+          speechQueue = [];
+          isSpeaking = false;
+          activeUtterance = null;
         } else {
           botBubble.innerHTML = `<span class="error-msg"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg> ${err.message}</span>`;
         }
@@ -1901,6 +2319,13 @@
 
     async function clearChat() {
       if (!await showConfirm('Clear Chat', 'Are you sure you want to clear the conversation history? This will reset all summary context.')) return;
+      
+      // Cancel active speech
+      window.speechSynthesis.cancel();
+      speechQueue = [];
+      isSpeaking = false;
+      activeUtterance = null;
+
       await fetch('/api/clear', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ session_id: SESSION_ID }) });
       msgCount = 0; Object.keys(modelUsage).forEach(k => delete modelUsage[k]);
       document.getElementById('pill-sum').textContent = 'NO SUMMARY'; document.getElementById('pill-sum').classList.remove('sum');
@@ -1912,6 +2337,309 @@
       <h2>Local RAG Assistant</h2>
       <p class="subtitle">Fully local chat with document embedding &amp; session memory</p>
     </div>`;
+    }
+
+    // ==========================================
+    // STT (SPEECH-TO-TEXT) & TTS (TEXT-TO-SPEECH) SYSTEM
+    // ==========================================
+    let ttsEnabled = true;
+    let speechQueue = [];
+    let isSpeaking = false;
+    let activeUtterance = null;
+    let lastSentenceIndex = 0;
+    
+    let recording = false;
+    let audioCtx = null;
+    let micStream = null;
+    let processorNode = null;
+    let audioBuffer = [];
+
+    function toggleMute() {
+      const btn = document.getElementById('tts-btn');
+      ttsEnabled = !ttsEnabled;
+      
+      if (ttsEnabled) {
+        btn.classList.add('active');
+        btn.title = "Mute Voice Readback";
+        btn.querySelector('span').textContent = "VOICE ON";
+        const w1 = document.getElementById('tts-wave-1');
+        const w2 = document.getElementById('tts-wave-2');
+        if (w1) w1.style.display = 'block';
+        if (w2) w2.style.display = 'block';
+        showToast("Voice readback enabled");
+        
+        // Register user gesture and play audio cue
+        const confirmation = new SpeechSynthesisUtterance("Voice readback active");
+        confirmation.rate = 1.05;
+        window.speechSynthesis.speak(confirmation);
+      } else {
+        btn.classList.remove('active');
+        btn.title = "Unmute Voice Readback";
+        btn.querySelector('span').textContent = "MUTED";
+        const w1 = document.getElementById('tts-wave-1');
+        const w2 = document.getElementById('tts-wave-2');
+        if (w1) w1.style.display = 'none';
+        if (w2) w2.style.display = 'none';
+        
+        window.speechSynthesis.cancel();
+        speechQueue = [];
+        isSpeaking = false;
+        activeUtterance = null;
+        showToast("Voice readback muted");
+      }
+    }
+
+    function cleanTextForSpeech(text) {
+      let cleaned = text;
+      // Remove code blocks
+      cleaned = cleaned.replace(/```[\s\S]*?```/g, '');
+      // Remove inline code ticks
+      cleaned = cleaned.replace(/`([^`]+)`/g, '$1');
+      // Remove markdown headers
+      cleaned = cleaned.replace(/^#{1,6}\s+/gm, '');
+      // Remove bold & italic formatting
+      cleaned = cleaned.replace(/\*\*([^*]+)\*\*/g, '$1');
+      cleaned = cleaned.replace(/\*([^*]+)\*/g, '$1');
+      cleaned = cleaned.replace(/__([^_]+)__/g, '$1');
+      cleaned = cleaned.replace(/_([^_]+)_/g, '$1');
+      // Clean up lists
+      cleaned = cleaned.replace(/^[\-\*]\s+/gm, '');
+      cleaned = cleaned.replace(/^\d+\.\s+/gm, '');
+      // Clean double spaces
+      cleaned = cleaned.replace(/\s+/g, ' ').trim();
+      return cleaned;
+    }
+
+    function processStreamingTTS(text, isDone) {
+      if (!ttsEnabled) return;
+      
+      let remainingText = text.substring(lastSentenceIndex);
+      const sentenceEndReg = /[.!?](\s+|$)/;
+      
+      while (true) {
+        let match = remainingText.match(sentenceEndReg);
+        if (!match) {
+          if (isDone && remainingText.trim().length > 0) {
+            queueSentence(remainingText.trim());
+            lastSentenceIndex = text.length;
+          }
+          break;
+        }
+        
+        let sentenceLength = match.index + match[0].length;
+        let sentence = remainingText.substring(0, match.index + 1).trim();
+        
+        lastSentenceIndex += sentenceLength;
+        remainingText = text.substring(lastSentenceIndex);
+        
+        if (sentence.length > 0) {
+          queueSentence(sentence);
+        }
+      }
+    }
+
+    function queueSentence(sentence) {
+      let clean = cleanTextForSpeech(sentence);
+      if (!clean || clean.length < 2) return;
+      speechQueue.push(clean);
+      speakNext();
+    }
+
+    function speakNext() {
+      if (!ttsEnabled || isSpeaking || speechQueue.length === 0) return;
+      
+      const textToSpeak = speechQueue.shift();
+      isSpeaking = true;
+      
+      const utterance = new SpeechSynthesisUtterance(textToSpeak);
+      activeUtterance = utterance;
+      
+      // Store utterance globally to prevent garbage collection issues in Chrome
+      window.utterances = window.utterances || [];
+      window.utterances.push(utterance);
+      
+      utterance.rate = 1.05;
+      utterance.pitch = 1.0;
+      
+      utterance.onend = () => {
+        const idx = window.utterances.indexOf(utterance);
+        if (idx > -1) window.utterances.splice(idx, 1);
+        isSpeaking = false;
+        activeUtterance = null;
+        speakNext();
+      };
+      
+      utterance.onerror = (e) => {
+        console.error("SpeechSynthesis error:", e);
+        const idx = window.utterances.indexOf(utterance);
+        if (idx > -1) window.utterances.splice(idx, 1);
+        isSpeaking = false;
+        activeUtterance = null;
+        speakNext();
+      };
+      
+      window.speechSynthesis.speak(utterance);
+    }
+
+    async function toggleRecord() {
+      const btn = document.getElementById('mic-btn');
+      const input = document.getElementById('user-input');
+      
+      if (!recording) {
+        try {
+          if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            showToast("⚠️ Secure context required: Access the app via http://localhost:5000 or configure HTTPS.");
+            console.warn("navigator.mediaDevices or getUserMedia is undefined. This is likely due to accessing the server over an insecure HTTP connection from a remote IP.");
+            return;
+          }
+          micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          audioBuffer = [];
+          recording = true;
+          btn.classList.add('recording');
+          btn.title = "Stop Recording";
+          input.placeholder = "Listening... Speak now. Click mic again to finish.";
+          
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+          if (audioCtx.state === 'suspended') {
+            await audioCtx.resume();
+          }
+          const source = audioCtx.createMediaStreamSource(micStream);
+          processorNode = audioCtx.createScriptProcessor(4096, 1, 1);
+          
+          processorNode.onaudioprocess = (e) => {
+            if (!recording) return;
+            const inputData = e.inputBuffer.getChannelData(0);
+            audioBuffer.push(new Float32Array(inputData));
+          };
+          
+          source.connect(processorNode);
+          processorNode.connect(audioCtx.destination);
+          showToast("Recording started...");
+        } catch (err) {
+          console.error("Error starting recording:", err);
+          showToast("Could not access microphone: " + err.message);
+        }
+      } else {
+        try {
+          recording = false;
+          btn.classList.remove('recording');
+          btn.title = "Record Voice";
+          input.placeholder = "Ask anything…";
+          
+          if (processorNode) {
+            processorNode.disconnect();
+            processorNode = null;
+          }
+          if (micStream) {
+            micStream.getTracks().forEach(track => track.stop());
+            micStream = null;
+          }
+          if (audioCtx) {
+            audioCtx.close();
+            audioCtx = null;
+          }
+          
+          if (audioBuffer.length === 0) {
+            showToast("No audio recorded");
+            return;
+          }
+          
+          let totalLength = audioBuffer.reduce((acc, val) => acc + val.length, 0);
+          let mergedBuffer = new Float32Array(totalLength);
+          let offset = 0;
+          for (let chunk of audioBuffer) {
+            mergedBuffer.set(chunk, offset);
+            offset += chunk.length;
+          }
+          
+          showToast("Transcribing audio...");
+          input.placeholder = "Transcribing voice...";
+          input.disabled = true;
+          
+          const wavBlob = encodeWAV(mergedBuffer, 16000);
+          const fd = new FormData();
+          fd.append('file', wavBlob, 'recording.wav');
+          
+          const res = await fetch('/api/transcribe', {
+            method: 'POST',
+            body: fd
+          });
+          const data = await res.json();
+          input.disabled = false;
+          input.placeholder = "Ask anything…";
+          
+          if (data.error) {
+            showToast("Transcription error: " + data.error);
+          } else if (data.text) {
+            let text = data.text.trim();
+            // Clean common Whisper silence hallucinations
+            const lowerText = text.toLowerCase().replace(/[.,!?]/g, '').trim();
+            const hallucinations = ["thank you", "thank you for watching", "thank you very much", "you", "ub", "bye"];
+            if (hallucinations.includes(lowerText)) {
+              text = "";
+            }
+            
+            if (text) {
+              if (input.value) {
+                input.value += " " + text;
+              } else {
+                input.value = text;
+              }
+              autoResize(input);
+              input.focus();
+            } else {
+              showToast("No speech detected.");
+            }
+          }
+        } catch (err) {
+          input.disabled = false;
+          input.placeholder = "Ask anything…";
+          showToast("Failed to transcribe: " + err.message);
+          
+          // Guarantee mic shutdown and release on exception
+          if (micStream) {
+            micStream.getTracks().forEach(track => track.stop());
+            micStream = null;
+          }
+          if (audioCtx) {
+            audioCtx.close();
+            audioCtx = null;
+          }
+        }
+      }
+    }
+
+    function encodeWAV(samples, sampleRate) {
+      const buffer = new ArrayBuffer(44 + samples.length * 2);
+      const view = new DataView(buffer);
+      writeString(view, 0, 'RIFF');
+      view.setUint32(4, 36 + samples.length * 2, true);
+      writeString(view, 8, 'WAVE');
+      writeString(view, 12, 'fmt ');
+      view.setUint32(16, 16, true);
+      view.setUint16(20, 1, true);
+      view.setUint16(22, 1, true);
+      view.setUint32(24, sampleRate, true);
+      view.setUint32(28, sampleRate * 2, true);
+      view.setUint16(32, 2, true);
+      view.setUint16(34, 16, true);
+      writeString(view, 36, 'data');
+      view.setUint32(40, samples.length * 2, true);
+      floatTo16BitPCM(view, 44, samples);
+      return new Blob([view], { type: 'audio/wav' });
+    }
+
+    function floatTo16BitPCM(output, offset, input) {
+      for (let i = 0; i < input.length; i++, offset += 2) {
+        let s = Math.max(-1, Math.min(1, input[i]));
+        output.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+      }
+    }
+
+    function writeString(view, offset, string) {
+      for (let i = 0; i < string.length; i++) {
+        view.setUint8(offset + i, string.charCodeAt(i));
+      }
     }
 
     refreshDocs(); refreshMemory();
