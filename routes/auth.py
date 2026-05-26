@@ -12,24 +12,37 @@ auth_bp = Blueprint("auth", __name__)
 @auth_bp.route("/api/register", methods=["POST"])
 def register():
     data = request.json or {}
-    username = data.get("username", "").strip()
+    first_name = data.get("first_name", "").strip()
+    last_name = data.get("last_name", "").strip()
+    email = data.get("email", "").strip()
     password = data.get("password", "").strip()
+    role = data.get("role", "user").strip().lower()
     
-    if not username or not password:
-        return jsonify({"error": "Username and password are required"}), 400
+    if not first_name or not last_name or not email or not password:
+        return jsonify({"error": "All fields are required"}), 400
         
     if len(password) < 6:
         return jsonify({"error": "Password must be at least 6 characters long"}), 400
+        
+    if role not in {"user", "admin"}:
+        return jsonify({"error": "Invalid role specified"}), 400
 
     try:
-        # Check if user already exists
-        existing_user = User.query.filter_by(username=username).first()
+        # Check if user already exists with this email or username
+        existing_user = User.query.filter((User.username == email) | (User.email == email)).first()
         if existing_user:
-            return jsonify({"error": "Username already exists"}), 400
+            return jsonify({"error": "Email is already registered"}), 400
             
         # Create user
         hashed_password = generate_password_hash(password)
-        new_user = User(username=username, password_hash=hashed_password)
+        new_user = User(
+            username=email,
+            first_name=first_name,
+            last_name=last_name,
+            email=email,
+            role=role,
+            password_hash=hashed_password
+        )
         db.session.add(new_user)
         db.session.commit()
         
@@ -46,22 +59,24 @@ def login():
     password = data.get("password", "").strip()
     
     if not username or not password:
-        return jsonify({"error": "Username and password are required"}), 400
+        return jsonify({"error": "Username/Email and password are required"}), 400
 
     try:
-        user = User.query.filter_by(username=username).first()
+        user = User.query.filter((User.username == username) | (User.email == username)).first()
         if not user or not check_password_hash(user.password_hash, password):
-            return jsonify({"error": "Invalid username or password"}), 401
+            return jsonify({"error": "Invalid username/email or password"}), 401
             
         # Create JWT access token
         access_token = create_access_token(identity=str(user.id))
         
         # Build response and set JWT cookie
+        display_name = user.first_name if user.first_name else user.username
         response = jsonify({
             "status": "ok",
             "message": "Logged in successfully",
             "access_token": access_token,
-            "username": user.username
+            "username": display_name,
+            "role": user.role
         })
         set_access_cookies(response, access_token)
         return response
@@ -87,9 +102,11 @@ def get_current_user():
         user = User.query.get(uuid.UUID(current_user_id))
         if not user:
             return jsonify({"logged_in": False}), 200
+        display_name = user.first_name if user.first_name else user.username
         return jsonify({
             "logged_in": True,
-            "username": user.username,
+            "username": display_name,
+            "role": user.role,
             "id": str(user.id)
         })
     except Exception:

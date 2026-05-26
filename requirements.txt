@@ -1,16 +1,23 @@
+# Core Web Application Framework
 flask>=3.0.0
+python-dotenv>=1.0.1
 requests>=2.31.0
-pypdf>=4.0.0
+
+# Database & User Authentication
+Flask-SQLAlchemy>=3.1.1
+psycopg2-binary>=2.9.9
+Flask-JWT-Extended>=4.6.0
+
+# RAG & Semantic Search
 chromadb>=0.4.0
+pypdf>=4.0.0
+
+# Offline STT & Speech Recognition
 SpeechRecognition>=3.10.0
 openai-whisper>=20230918
 torch>=2.0.0
 soundfile>=0.12.0
+
+# Production WSGI Servers
 gunicorn>=21.2.0
 waitress>=3.0.0
-Flask-SQLAlchemy>=3.1.1
-psycopg2-binary>=2.9.9
-Flask-JWT-Extended>=4.6.0
-python-dotenv>=1.0.1
-
-

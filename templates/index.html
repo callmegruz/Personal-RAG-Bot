@@ -11,13 +11,21 @@
     href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Outfit:wght@400;500;600;700;800&display=swap"
     rel="stylesheet" />
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  <style>
+    .auth-hidden { display: none !important; }
+    .auth-visible { display: flex !important; }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
 </head>
 
 <body class="theme-{{ theme }}">
 
   <!-- Auth Overlay Modal -->
-  <div id="auth-modal"
-    style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--bg); background-image: radial-gradient(circle at center, var(--surface2) 0%, var(--bg) 100%); z-index: 5000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(16px);">
+  <div id="auth-modal" class="{% if is_logged_in %}auth-hidden{% else %}auth-visible{% endif %}"
+    style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--bg); background-image: radial-gradient(circle at center, var(--surface2) 0%, var(--bg) 100%); z-index: 5000; align-items: center; justify-content: center; backdrop-filter: blur(16px);">
     <div
       style="background: var(--surface-blur); border: 1px solid var(--border); border-radius: var(--r); width: 100%; max-width: 400px; padding: 32px; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5); display: flex; flex-direction: column; gap: 20px; animation: slideIn 0.35s cubic-bezier(0.4, 0, 0.2, 1);">
       <div style="display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px;">
@@ -26,6 +34,8 @@
           <svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" stroke-width="2" fill="none">
             <polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5"></polygon>
             <line x1="12" y1="2" x2="12" y2="22"></line>
+            <line x1="12" y1="12" x2="22" y2="8.5"></line>
+            <line x1="12" y1="12" x2="2" y2="8.5"></line>
           </svg>
         </div>
         <h2
@@ -36,13 +46,50 @@
       </div>
 
       <div style="display: flex; flex-direction: column; gap: 14px;">
-        <div style="display: flex; flex-direction: column; gap: 6px;">
+        <!-- Username/Email (Login Only) -->
+        <div id="login-username-group" style="display: flex; flex-direction: column; gap: 6px; position: relative;">
           <label
-            style="font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; font-family: 'JetBrains Mono', monospace;">Username</label>
-          <input type="text" id="auth-username" placeholder="Enter username..."
+            style="font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; font-family: 'JetBrains Mono', monospace;">Username or Email</label>
+          <input type="text" id="auth-username" placeholder="Enter username or email..."
+            style="background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm); color: var(--text); padding: 10px 14px; font-size: 14px; outline: none; transition: var(--transition); width: 100%; font-family: 'Plus Jakarta Sans', sans-serif;"
+            onfocus="onUsernameFocus()" onblur="onUsernameBlur()" autocomplete="off" />
+          
+          <!-- Recent Usernames Suggestions Dropdown -->
+          <div id="auth-username-suggestions" style="display: none; position: absolute; top: 100%; left: 0; width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm); box-shadow: 0 10px 30px rgba(0,0,0,0.35); z-index: 6000; flex-direction: column; padding: 4px 0; margin-top: 4px; animation: slideIn 0.15s ease;">
+          </div>
+        </div>
+
+        <!-- First Name & Last Name (Register Only) -->
+        <div id="register-name-group" style="display: none; gap: 12px;">
+          <div style="display: flex; flex-direction: column; gap: 6px; flex: 1;">
+            <label
+              style="font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; font-family: 'JetBrains Mono', monospace;">First
+              Name</label>
+            <input type="text" id="auth-first-name" placeholder="John"
+              style="background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm); color: var(--text); padding: 10px 14px; font-size: 14px; outline: none; transition: var(--transition); width: 100%; font-family: 'Plus Jakarta Sans', sans-serif;"
+              onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'" />
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px; flex: 1;">
+            <label
+              style="font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; font-family: 'JetBrains Mono', monospace;">Last
+              Name</label>
+            <input type="text" id="auth-last-name" placeholder="Doe"
+              style="background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm); color: var(--text); padding: 10px 14px; font-size: 14px; outline: none; transition: var(--transition); width: 100%; font-family: 'Plus Jakarta Sans', sans-serif;"
+              onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'" />
+          </div>
+        </div>
+
+        <!-- Email ID (Register Only) -->
+        <div id="register-email-group" style="display: none; flex-direction: column; gap: 6px;">
+          <label
+            style="font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; font-family: 'JetBrains Mono', monospace;">Email
+            ID</label>
+          <input type="email" id="auth-email" placeholder="john.doe@example.com"
             style="background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm); color: var(--text); padding: 10px 14px; font-size: 14px; outline: none; transition: var(--transition); width: 100%; font-family: 'Plus Jakarta Sans', sans-serif;"
             onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'" />
         </div>
+
+        <!-- Password (Both Modes) -->
         <div style="display: flex; flex-direction: column; gap: 6px;">
           <label
             style="font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; font-family: 'JetBrains Mono', monospace;">Password</label>
@@ -50,6 +97,33 @@
             style="background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm); color: var(--text); padding: 10px 14px; font-size: 14px; outline: none; transition: var(--transition); width: 100%; font-family: 'Plus Jakarta Sans', sans-serif;"
             onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"
             onkeydown="if(event.key==='Enter') submitAuth()" />
+        </div>
+
+        <!-- Confirm Password (Register Only) -->
+        <div id="register-confirm-password-group" style="display: none; flex-direction: column; gap: 6px;">
+          <label
+            style="font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; font-family: 'JetBrains Mono', monospace;">Confirm
+            Password</label>
+          <input type="password" id="auth-confirm-password" placeholder="Confirm password..."
+            style="background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm); color: var(--text); padding: 10px 14px; font-size: 14px; outline: none; transition: var(--transition); width: 100%; font-family: 'Plus Jakarta Sans', sans-serif;"
+            onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"
+            onkeydown="if(event.key==='Enter') submitAuth()" />
+        </div>
+
+        <!-- Role Selector (Register Only) -->
+        <div id="register-role-group" style="display: none; flex-direction: column; gap: 6px;">
+          <label
+            style="font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; font-family: 'JetBrains Mono', monospace;">Select Role</label>
+          <div style="position: relative; width: 100%; display: flex; align-items: center; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 0 14px; transition: var(--transition);"
+               onfocuswithin="this.style.borderColor='var(--accent)'" onfocusout="this.style.borderColor='var(--border)'">
+            <select id="auth-role"
+              style="background: transparent; border: none; color: var(--text); padding: 10px 24px 10px 0; font-size: 14px; outline: none; width: 100%; font-family: 'Plus Jakarta Sans', sans-serif; height: 42px; cursor: pointer; -webkit-appearance: none; -moz-appearance: none; appearance: none;">
+              <option value="user" selected style="background: var(--surface2); color: var(--text);">User (Standard Access)</option>
+              <option value="admin" style="background: var(--surface2); color: var(--text);">Admin (Maintenance Access)</option>
+            </select>
+            <!-- Sleek CSS Chevron Arrow -->
+            <div style="position: absolute; right: 14px; width: 6px; height: 6px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg); pointer-events: none; margin-top: -3px;"></div>
+          </div>
         </div>
       </div>
 
@@ -153,6 +227,18 @@
           </svg>
         </div>
         <div class="profile-dropdown">
+          <a class="profile-dropdown-item" id="admin-dashboard-btn" href="/admin"
+            style="display: none; text-decoration: none; align-items: center; gap: 8px; color: var(--muted); cursor: pointer;"
+            onmouseenter="this.style.background='var(--accent-dim)'; this.style.color='var(--accent)'"
+            onmouseleave="this.style.background='transparent'; this.style.color='var(--muted)'">
+            <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2.5" fill="none">
+              <rect x="3" y="3" width="7" height="7"></rect>
+              <rect x="14" y="3" width="7" height="7"></rect>
+              <rect x="14" y="14" width="7" height="7"></rect>
+              <rect x="3" y="14" width="7" height="7"></rect>
+            </svg>
+            <span>ADMIN DASHBOARD</span>
+          </a>
           <button class="profile-dropdown-item" id="logout-btn" onclick="logoutUser()">
             <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
@@ -249,7 +335,7 @@
       </div>
 
       <div id="messages">
-        <div class="empty-state" id="empty-state">
+        <div class="empty-state" id="empty-state" style="display: {% if is_logged_in %}none{% else %}flex{% endif %};">
           <div class="empty-logo">
             <svg viewBox="0 0 24 24" width="48" height="48" stroke="var(--accent)" stroke-width="1.5" fill="none"
               style="filter: drop-shadow(0 0 8px var(--accent-glow))">
@@ -259,7 +345,7 @@
               <line x1="12" y1="12" x2="2" y2="8.5"></line>
             </svg>
           </div>
-          <h2>PERSONAL RAG BOT</h2>
+          <h2>{{ greeting }}</h2>
           <p class="subtitle">Fully local chat with document embedding &amp; session memory</p>
         </div>
       </div>
@@ -358,7 +444,7 @@
     </div>
   </div>
 
-    <script>
+  <script>
     // Server-injected configuration values
     window.ACTIVE_THEME = "{{ theme }}";
   </script>

@@ -29,6 +29,38 @@ def list_models():
     return jsonify({"models": get_installed_models()})
 
 
+@chat_bp.route("/api/chat/history", methods=["GET"])
+@jwt_required()
+def get_chat_history():
+    current_user_id = get_jwt_identity()
+    user_uuid = uuid.UUID(current_user_id)
+    session_id = request.args.get("session_id", "default")
+    
+    try:
+        session_uuid = uuid.UUID(session_id)
+    except ValueError:
+        session_uuid = get_deterministic_uuid(current_user_id, session_id)
+        
+    try:
+        conv = Conversation.query.filter_by(id=session_uuid, user_id=user_uuid).first()
+        if not conv:
+            return jsonify({"messages": [], "summary": ""}), 200
+            
+        messages_db = ChatMessage.query.filter_by(conversation_id=conv.id).order_by(ChatMessage.timestamp.asc()).all()
+        messages = [{
+            "role": m.role,
+            "content": m.content,
+            "timestamp": m.timestamp.strftime("%Y-%m-%d %H:%M:%S")
+        } for m in messages_db]
+        
+        return jsonify({
+            "messages": messages,
+            "summary": conv.summary or ""
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @chat_bp.route("/api/memory", methods=["GET"])
 @jwt_required()
 def get_memory():
@@ -168,26 +200,43 @@ def chat():
                 if done:
                     # Save Assistant message to database
                     assistant_msg_db = ChatMessage(
-                        conversation_id=conv.id,
+                        conversation_id=session_uuid,
                         role="assistant",
                         content=full_response
                     )
                     db.session.add(assistant_msg_db)
                     db.session.commit()
                     
-                    try:
-                        extract_and_save_memory(user_msg, full_response, model, current_user_id)
-                    except Exception as e:
-                        print(f"Error saving facts in routes/chat.py: {e}")
+                    # Run memory extraction asynchronously in a background thread to prevent blocking the stream response!
+                    import threading
+                    from flask import current_app
+                    
+                    app_instance = current_app._get_current_object()
+                    
+                    def run_async_extraction(app, u_msg, r_msg, md, uid):
+                        with app.app_context():
+                            try:
+                                extract_and_save_memory(u_msg, r_msg, md, uid)
+                            except Exception as ex:
+                                print(f"[ERROR] Asynchronous memory extraction failed: {ex}")
+                                
+                    threading.Thread(
+                        target=run_async_extraction,
+                        args=(app_instance, user_msg, full_response, model, current_user_id),
+                        daemon=True
+                    ).start()
                         
                     yield f"data: {json.dumps({'token': '', 'done': True})}\n\n"
                     return
 
         except requests.exceptions.ConnectionError:
+            db.session.rollback()
             yield f"data: {json.dumps({'error': 'Cannot connect to Ollama. Is it running?', 'done': True})}\n\n"
         except requests.exceptions.HTTPError as e:
+            db.session.rollback()
             yield f"data: {json.dumps({'error': f'Ollama error {e.response.status_code}', 'done': True})}\n\n"
         except Exception as e:
+            db.session.rollback()
             yield f"data: {json.dumps({'error': str(e), 'done': True})}\n\n"
 
     return Response(

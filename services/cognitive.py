@@ -2,19 +2,29 @@ import json
 import uuid
 import re
 import requests
+import time
 from models import db, Conversation, ChatMessage, UserMemory
 import config
 from services.rag import collection
 
 # ── Ollama Helper Methods ─────────────────────────────────────────────────────────
 
+_installed_models_cache = None
+_installed_models_cache_time = 0
+
 def get_installed_models() -> list:
     """
     Returns the list of locally pulled Ollama models.
     Filters out embedding models like nomic-embed-text.
+    Caches the results for 30 seconds to prevent slow page reloads.
     """
+    global _installed_models_cache, _installed_models_cache_time
+    now = time.time()
+    if _installed_models_cache is not None and (now - _installed_models_cache_time) < 30:
+        return _installed_models_cache
+
     try:
-        r = requests.get(f"{config.OLLAMA_URL}/api/tags", timeout=5)
+        r = requests.get(f"{config.OLLAMA_URL}/api/tags", timeout=2)
         if r.status_code != 200:
             return config.AVAILABLE_MODELS
         
@@ -27,9 +37,14 @@ def get_installed_models() -> list:
 
         ordered = [m for m in config.AVAILABLE_MODELS if m in installed]
         extras = [m for m in installed if m not in config.AVAILABLE_MODELS]
-        return ordered + sorted(extras)
-    except requests.exceptions.ConnectionError:
-        return []
+        _installed_models_cache = ordered + sorted(extras)
+        _installed_models_cache_time = now
+        return _installed_models_cache
+    except Exception:
+        # Fallback to cache if available, otherwise return default config models
+        if _installed_models_cache is not None:
+            return _installed_models_cache
+        return config.AVAILABLE_MODELS
 
 
 def ollama_chat_stream(messages: list, model: str):
@@ -178,21 +193,39 @@ def extract_and_save_memory(user_msg: str, assistant_msg: str, model: str, user_
         "Respond ONLY with a JSON object {\"key\": \"value\"} or {} if none. No markdown."
     )
     try:
-        raw   = ollama_complete(prompt, model).strip().strip("```json").strip("```").strip()
-        facts = json.loads(raw)
+        raw = ollama_complete(prompt, model)
+        
+        # 1. Clean raw text from <think>...</think> processes (very common in reasoning models like deepseek-r1)
+        raw_clean = re.sub(r'<think>.*?</think>', '', raw, flags=re.DOTALL)
+        
+        # 2. Extract first JSON block matching { ... } to handle markdown wraps or leading/trailing text
+        start = raw_clean.find('{')
+        end = raw_clean.rfind('}')
+        if start != -1 and end != -1 and end > start:
+            json_str = raw_clean[start:end+1]
+        else:
+            json_str = raw_clean.strip().strip("```json").strip("```").strip()
+            
+        facts = json.loads(json_str)
         if facts and isinstance(facts, dict):
             for key, val in facts.items():
+                if not key or not val:
+                    continue
+                # Ensure keys and values are treated as clean strings
+                key_str = str(key).strip()
+                val_str = str(val).strip()
+                
                 existing = UserMemory.query.filter_by(
                     user_id=uuid.UUID(user_id),
-                    fact_key=key
+                    fact_key=key_str
                 ).first()
                 if existing:
-                    existing.fact_value = val
+                    existing.fact_value = val_str
                 else:
                     new_mem = UserMemory(
                         user_id=uuid.UUID(user_id),
-                        fact_key=key,
-                        fact_value=val
+                        fact_key=key_str,
+                        fact_value=val_str
                     )
                     db.session.add(new_mem)
             db.session.commit()
