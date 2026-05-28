@@ -47,6 +47,27 @@ def get_installed_models() -> list:
         return config.AVAILABLE_MODELS
 
 
+def get_fast_background_model() -> str:
+    """Selects a lightweight, high-speed model for background tasks like facts extraction & titling."""
+    try:
+        installed = get_installed_models()
+        # Prefer llama3.2 (very fast 3B), then phi3, mistral, gemma2, etc.
+        preferred_fast = ["llama3.2", "phi3", "mistral", "gemma2"]
+        for model in preferred_fast:
+            # Check for exact or partial matches
+            for inst in installed:
+                if model in inst.lower():
+                    return inst
+        # Fallback to the first installed non-deepseek model if possible
+        for inst in installed:
+            if "deepseek" not in inst.lower() and "think" not in inst.lower():
+                return inst
+        # Absolute fallback to first installed model
+        return installed[0] if installed else config.AVAILABLE_MODELS[0]
+    except Exception:
+        return config.AVAILABLE_MODELS[0]
+
+
 def ollama_chat_stream(messages: list, model: str):
     """Initiates a streaming chat interface with Ollama."""
     r = requests.post(
@@ -186,26 +207,33 @@ def extract_and_save_memory(user_msg: str, assistant_msg: str, model: str, user_
     Autonomous assistant pass that parses new dialogue elements, structures personal facts
     as JSON, and upserts them securely into SQL db records.
     """
+    # Dynamically offload to a fast background model to avoid DeepSeek latency/JSON bugs
+    fast_model = get_fast_background_model()
+
+    # 1. Clean raw dialog turns from <think>...</think> tag noise (very common in DeepSeek reasoning streams)
+    clean_user = re.sub(r'<think>.*?</think>', '', user_msg, flags=re.DOTALL).strip()
+    clean_assistant = re.sub(r'<think>.*?</think>', '', assistant_msg, flags=re.DOTALL).strip()
+
     prompt = (
         "Extract personal facts about the user worth remembering long-term "
         "(name, occupation, preferences, projects, etc.).\n\n"
-        f"USER: {user_msg}\nASSISTANT: {assistant_msg}\n\n"
+        f"USER: {clean_user}\nASSISTANT: {clean_assistant}\n\n"
         "Respond ONLY with a JSON object {\"key\": \"value\"} or {} if none. No markdown."
     )
     try:
-        raw = ollama_complete(prompt, model)
+        raw = ollama_complete(prompt, fast_model)
         
-        # 1. Clean raw text from <think>...</think> processes (very common in reasoning models like deepseek-r1)
+        # Clean response raw text from thinking tags
         raw_clean = re.sub(r'<think>.*?</think>', '', raw, flags=re.DOTALL)
         
         # 2. Extract first JSON block matching { ... } to handle markdown wraps or leading/trailing text
         start = raw_clean.find('{')
         end = raw_clean.rfind('}')
-        if start != -1 and end != -1 and end > start:
-            json_str = raw_clean[start:end+1]
-        else:
-            json_str = raw_clean.strip().strip("```json").strip("```").strip()
+        if start == -1 or end == -1 or end <= start:
+            # Exit early if no JSON object is present, avoiding exceptions and noisy logs
+            return
             
+        json_str = raw_clean[start:end+1]
         facts = json.loads(json_str)
         if facts and isinstance(facts, dict):
             for key, val in facts.items():
@@ -215,10 +243,16 @@ def extract_and_save_memory(user_msg: str, assistant_msg: str, model: str, user_
                 key_str = str(key).strip()
                 val_str = str(val).strip()
                 
-                existing = UserMemory.query.filter_by(
-                    user_id=uuid.UUID(user_id),
-                    fact_key=key_str
+                # 3. PostgreSQL VARCHAR(100) constraint handling: truncate fact keys to prevent database crashes
+                if len(key_str) > 100:
+                    key_str = key_str[:97] + "..."
+                
+                # 4. Case-insensitive lookup using db.func.lower to prevent casing duplicate keys
+                existing = UserMemory.query.filter(
+                    UserMemory.user_id == uuid.UUID(user_id),
+                    db.func.lower(UserMemory.fact_key) == key_str.lower()
                 ).first()
+                
                 if existing:
                     existing.fact_value = val_str
                 else:

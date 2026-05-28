@@ -39,7 +39,19 @@ app.register_blueprint(admin_bp)
 with app.app_context():
     try:
         db.create_all()
-        print("[SUCCESS] PostgreSQL database tables verified/created successfully.")
+        # Verify and dynamically append 'title' column if it doesn't exist in PostgreSQL
+        from sqlalchemy import text
+        try:
+            db.session.execute(text("ALTER TABLE conversations ADD COLUMN IF NOT EXISTS title VARCHAR(150) DEFAULT 'New Chat'"))
+            # High-performance indexing for rapid page loading and traversing speeds
+            db.session.execute(text("CREATE INDEX IF NOT EXISTS idx_conversations_user_id ON conversations (user_id)"))
+            db.session.execute(text("CREATE INDEX IF NOT EXISTS idx_chat_messages_conversation_id ON chat_messages (conversation_id)"))
+            db.session.execute(text("CREATE INDEX IF NOT EXISTS idx_user_memories_user_id ON user_memories (user_id)"))
+            db.session.commit()
+            print("[SUCCESS] PostgreSQL tables, columns, and query performance indexes verified successfully.")
+        except Exception as alter_err:
+            db.session.rollback()
+            print(f"[WARNING] Could not execute DB dynamic column/index migrations: {alter_err}")
     except Exception as e:
         print(f"[WARNING] Could not connect to PostgreSQL or create tables: {e}")
         print("[INFO] Make sure your PostgreSQL database is running and configured correctly in your .env file.")

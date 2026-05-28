@@ -242,10 +242,11 @@ async function loadChatHistory() {
     }
     const data = await res.json();
     
+    const container = document.getElementById('messages');
+    if (container) container.innerHTML = '';
+    
     if (data.messages && data.messages.length > 0) {
       removeEmptyState();
-      const container = document.getElementById('messages');
-      container.innerHTML = '';
       
       msgCount = data.messages.length;
       
@@ -259,17 +260,231 @@ async function loadChatHistory() {
           pillSum.textContent = 'SUMMARY ✓';
           pillSum.classList.add('sum');
         }
+      } else {
+        const pillSum = document.getElementById('pill-sum');
+        if (pillSum) {
+          pillSum.textContent = 'NO SUMMARY';
+          pillSum.classList.remove('sum');
+        }
       }
       
       scrollBottom();
     } else {
+      // Re-insert empty state
       const es = document.getElementById('empty-state');
-      if (es) es.style.display = 'flex';
+      if (es) {
+        es.style.display = 'flex';
+      } else {
+        const wrap = document.createElement('div');
+        wrap.className = 'empty-state';
+        wrap.id = 'empty-state';
+        wrap.innerHTML = `
+          <div class="empty-logo">
+            <svg viewBox="0 0 24 24" width="48" height="48" stroke="var(--accent)" stroke-width="1.5" fill="none" style="filter: drop-shadow(0 0 8px var(--accent-glow))"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5"></polygon><line x1="12" y1="2" x2="12" y2="22"></line><line x1="12" y1="12" x2="22" y2="8.5"></line><line x1="12" y1="12" x2="2" y2="8.5"></line></svg>
+          </div>
+          <h2>Local RAG Assistant</h2>
+          <p class="subtitle">Fully local chat with document embedding &amp; session memory</p>
+        `;
+        container.appendChild(wrap);
+        updateEmptyStateGreeting();
+      }
     }
   } catch (err) {
     console.error("Failed to load chat history:", err);
     const es = document.getElementById('empty-state');
     if (es) es.style.display = 'flex';
+  }
+}
+
+async function refreshChatSessions() {
+  try {
+    const res = await fetch('/api/chat/sessions');
+    if (!res.ok) return;
+    const sessions = await res.json();
+    
+    // Update chat count tracker
+    const countEl = document.getElementById('chat-count');
+    if (countEl) {
+      countEl.textContent = `${sessions.length}/5`;
+    }
+    
+    // Check if the current SESSION_ID is in the list
+    const sessionIds = sessions.map(s => s.id);
+    if (!sessionIds.includes(SESSION_ID)) {
+      if (sessions.length > 0) {
+        SESSION_ID = sessions[0].id;
+        localStorage.setItem('active_session_id', SESSION_ID);
+      }
+    }
+    
+    renderChatSessions(sessions);
+    loadChatHistory();
+  } catch (err) {
+    console.error("Failed to load chat sessions:", err);
+  }
+}
+
+function renderChatSessions(sessions) {
+  const container = document.getElementById('chat-session-list');
+  if (!container) return;
+  
+  if (sessions.length === 0) {
+    container.innerHTML = '<div class="doc-empty">No active chats.</div>';
+    return;
+  }
+  
+  container.innerHTML = '';
+  sessions.forEach(s => {
+    const isActive = s.id === SESSION_ID;
+    const item = document.createElement('div');
+    item.className = `sb-chat-item${isActive ? ' active' : ''}`;
+    item.dataset.id = s.id; // High-performance DOM identifier tracking
+    item.onclick = () => selectChatSession(s.id);
+    
+    item.innerHTML = `
+      <div class="sb-chat-title-wrap">
+        <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none" style="flex-shrink:0;">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+        </svg>
+        <span class="sb-chat-title" title="${esc(s.title)}">${esc(s.title)}</span>
+      </div>
+      <span class="sb-chat-del" onclick="deleteChatSession(event, '${s.id}')" title="Delete Chat">&times;</span>
+    `;
+    
+    container.appendChild(item);
+  });
+}
+
+async function selectChatSession(id) {
+  if (id === SESSION_ID) return;
+  
+  if (isStreaming) {
+    if (currentAbortController) {
+      currentAbortController.abort();
+    }
+  }
+  
+  SESSION_ID = id;
+  localStorage.setItem('active_session_id', SESSION_ID);
+  
+  const msgContainer = document.getElementById('messages');
+  if (msgContainer) msgContainer.innerHTML = '';
+  
+  window.speechSynthesis.cancel();
+  speechQueue = [];
+  isSpeaking = false;
+  activeUtterance = null;
+  
+  msgCount = 0;
+  for (const k in modelUsage) delete modelUsage[k];
+  const historyList = document.getElementById('model-history-list');
+  if (historyList) historyList.innerHTML = '<div class="doc-empty" style="padding:8px 0">None yet.</div>';
+  
+  const pillSum = document.getElementById('pill-sum');
+  if (pillSum) {
+    pillSum.textContent = 'NO SUMMARY';
+    pillSum.classList.remove('sum');
+  }
+  
+  // High-performance DOM switch (toggles highlights instantly in the DOM with zero API latency)
+  const items = document.querySelectorAll('#chat-session-list .sb-chat-item');
+  items.forEach(item => {
+    item.classList.toggle('active', item.dataset.id === SESSION_ID);
+  });
+  
+  loadChatHistory();
+}
+
+async function createNewChat() {
+  if (isStreaming) {
+    showToast("Please wait for assistant to finish generating.");
+    return;
+  }
+  
+  try {
+    const res = await fetch('/api/chat/sessions/new', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    const data = await res.json();
+    
+    if (!res.ok) {
+      showToast(data.error || "Cannot create new chat.");
+      return;
+    }
+    
+    SESSION_ID = data.id;
+    localStorage.setItem('active_session_id', SESSION_ID);
+    
+    const msgContainer = document.getElementById('messages');
+    if (msgContainer) {
+      msgContainer.innerHTML = `<div class="empty-state" id="empty-state">
+        <div class="empty-logo">
+          <svg viewBox="0 0 24 24" width="48" height="48" stroke="var(--accent)" stroke-width="1.5" fill="none" style="filter: drop-shadow(0 0 8px var(--accent-glow))"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5"></polygon><line x1="12" y1="2" x2="12" y2="22"></line><line x1="12" y1="12" x2="22" y2="8.5"></line><line x1="12" y1="12" x2="2" y2="8.5"></line></svg>
+        </div>
+        <h2>Local RAG Assistant</h2>
+        <p class="subtitle">Fully local chat with document embedding &amp; session memory</p>
+      </div>`;
+    }
+    updateEmptyStateGreeting();
+    
+    msgCount = 0;
+    for (const k in modelUsage) delete modelUsage[k];
+    const historyList = document.getElementById('model-history-list');
+    if (historyList) historyList.innerHTML = '<div class="doc-empty" style="padding:8px 0">None yet.</div>';
+    
+    const pillSum = document.getElementById('pill-sum');
+    if (pillSum) {
+      pillSum.textContent = 'NO SUMMARY';
+      pillSum.classList.remove('sum');
+    }
+    
+    refreshChatSessions();
+    showToast("Created a new chat thread");
+  } catch (err) {
+    showToast("Failed to create new chat session.");
+  }
+}
+
+async function deleteChatSession(event, id) {
+  if (event) event.stopPropagation();
+  
+  if (!await showConfirm('Delete Chat Thread', 'Are you sure you want to delete this chat history? This action is permanent.')) return;
+  
+  try {
+    const res = await fetch(`/api/chat/sessions/${id}`, {
+      method: 'DELETE'
+    });
+    
+    if (!res.ok) {
+      showToast("Could not delete chat session.");
+      return;
+    }
+    
+    showToast("Chat thread deleted");
+    
+    if (id === SESSION_ID) {
+      localStorage.removeItem('active_session_id');
+      SESSION_ID = null;
+      
+      const msgContainer = document.getElementById('messages');
+      if (msgContainer) msgContainer.innerHTML = '';
+      
+      msgCount = 0;
+      for (const k in modelUsage) delete modelUsage[k];
+      const historyList = document.getElementById('model-history-list');
+      if (historyList) historyList.innerHTML = '<div class="doc-empty" style="padding:8px 0">None yet.</div>';
+      
+      const pillSum = document.getElementById('pill-sum');
+      if (pillSum) {
+        pillSum.textContent = 'NO SUMMARY';
+        pillSum.classList.remove('sum');
+      }
+    }
+    
+    refreshChatSessions();
+  } catch (err) {
+    showToast("Failed to delete chat thread.");
   }
 }
 
@@ -292,11 +507,77 @@ function clickSuggestion(text) {
   autoResize(input);
 }
 
+/* Custom Alert Modal */
+function showAlert(title, message, isSuccess = false) {
+  const iconContainer = document.getElementById('modal-icon-container');
+  const confirmBtn = document.getElementById('modal-confirm-btn');
+  const cancelBtn = document.querySelector('#confirm-modal .modal-footer .btn:not(.danger)');
+  
+  document.getElementById('modal-title-text').textContent = title;
+  document.getElementById('modal-body-text').textContent = message;
+  
+  if (cancelBtn) cancelBtn.style.display = 'none';
+  if (confirmBtn) {
+    confirmBtn.textContent = 'OK';
+    confirmBtn.className = 'btn active';
+    confirmBtn.style.background = 'var(--accent)';
+    confirmBtn.style.color = 'var(--bg)';
+    confirmBtn.style.borderColor = 'transparent';
+  }
+  
+  if (iconContainer) {
+    if (isSuccess) {
+      iconContainer.innerHTML = `
+        <svg viewBox="0 0 24 24" width="16" height="16" stroke="var(--accent)" stroke-width="2.5" fill="none">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+      `;
+    } else {
+      iconContainer.innerHTML = `
+        <svg viewBox="0 0 24 24" width="16" height="16" stroke="var(--info)" stroke-width="2.5" fill="none">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="16" x2="12" y2="12"></line>
+          <line x1="12" y1="8" x2="12.01" y2="8"></line>
+        </svg>
+      `;
+    }
+  }
+  
+  document.getElementById('confirm-modal').classList.add('active');
+  return new Promise((resolve) => {
+    modalResolve = resolve;
+  });
+}
+
 /* Custom Confirmation Modal */
 let modalResolve = null;
 function showConfirm(title, message) {
+  const iconContainer = document.getElementById('modal-icon-container');
+  const confirmBtn = document.getElementById('modal-confirm-btn');
+  const cancelBtn = document.querySelector('#confirm-modal .modal-footer .btn:not(.danger)');
+  
   document.getElementById('modal-title-text').textContent = title;
   document.getElementById('modal-body-text').textContent = message;
+  
+  if (cancelBtn) cancelBtn.style.display = 'inline-block';
+  if (confirmBtn) {
+    confirmBtn.textContent = 'Confirm';
+    confirmBtn.className = 'btn danger';
+    confirmBtn.style.background = '';
+    confirmBtn.style.color = '';
+    confirmBtn.style.borderColor = '';
+  }
+  
+  if (iconContainer) {
+    iconContainer.innerHTML = `
+      <svg viewBox="0 0 24 24" width="16" height="16" stroke="var(--danger)" stroke-width="2.5" fill="none">
+        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+        <line x1="12" y1="9" x2="12" y2="13"></line>
+        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+      </svg>
+    `;
+  }
+  
   document.getElementById('confirm-modal').classList.add('active');
   return new Promise((resolve) => {
     modalResolve = resolve;
@@ -573,6 +854,19 @@ async function sendMessage() {
               document.getElementById('pill-sum').classList.add('sum');
             }
             setTimeout(refreshMemory, 1800);
+
+            // Reload active chat titles (give background thread 800ms to process refinement!)
+            setTimeout(async () => {
+              try {
+                const res = await fetch('/api/chat/sessions');
+                if (res.ok) {
+                  const sessions = await res.json();
+                  const countEl = document.getElementById('chat-count');
+                  if (countEl) countEl.textContent = `${sessions.length}/5`;
+                  renderChatSessions(sessions);
+                }
+              } catch (e) {}
+            }, 800);
           }
           scrollBottom();
         }
@@ -626,6 +920,7 @@ async function clearChat() {
       <p class="subtitle">Fully local chat with document embedding &amp; session memory</p>
     </div>`;
   updateEmptyStateGreeting();
+  refreshChatSessions();
 }
 
 // ==========================================
@@ -972,10 +1267,10 @@ async function checkAuthStatus() {
       // Set dynamic greeting message based on local machine time
       updateEmptyStateGreeting();
 
-      // Only load RAG & Memory data once user identity is verified!
+      // Only load RAG, Memory, and Chat Sessions once user identity is verified!
       refreshDocs();
       refreshMemory();
-      loadChatHistory();
+      refreshChatSessions();
     } else {
       document.getElementById('auth-modal').style.display = 'flex';
     }
@@ -1184,10 +1479,6 @@ async function submitAuth() {
       showToast(`Welcome back, ${displayName}!`);
       window.location.reload();
     } else {
-      showToast("Registration successful! Please log in.");
-      isAuthModeLogin = true;
-      toggleAuthMode();
-      
       submitBtn.disabled = false;
       submitBtn.style.opacity = '1';
       submitBtn.innerHTML = "SIGN IN";
@@ -1199,6 +1490,12 @@ async function submitAuth() {
       document.getElementById('auth-password').value = '';
       document.getElementById('auth-confirm-password').value = '';
       document.getElementById('auth-role').value = 'user';
+      
+      isAuthModeLogin = true;
+      toggleAuthMode();
+      
+      // Show the custom alert modal
+      showAlert("Sign Up Successful", "Your local account has been registered successfully! You can now sign in using your credentials.", true);
     }
   } catch (err) {
     errorDiv.style.display = 'flex';

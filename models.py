@@ -25,7 +25,8 @@ class Conversation(db.Model):
     __tablename__ = 'conversations'
     
     id = db.Column(db.UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = db.Column(db.UUID(as_uuid=True), db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    user_id = db.Column(db.UUID(as_uuid=True), db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    title = db.Column(db.String(150), nullable=False, default="New Chat")
     summary = db.Column(db.Text, default="")
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -36,7 +37,7 @@ class ChatMessage(db.Model):
     __tablename__ = 'chat_messages'
     
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    conversation_id = db.Column(db.UUID(as_uuid=True), db.ForeignKey('conversations.id', ondelete='CASCADE'), nullable=False)
+    conversation_id = db.Column(db.UUID(as_uuid=True), db.ForeignKey('conversations.id', ondelete='CASCADE'), nullable=False, index=True)
     role = db.Column(db.String(20), nullable=False)  # 'user', 'assistant', 'system'
     content = db.Column(db.Text, nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
@@ -45,7 +46,7 @@ class UserMemory(db.Model):
     __tablename__ = 'user_memories'
     
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    user_id = db.Column(db.UUID(as_uuid=True), db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    user_id = db.Column(db.UUID(as_uuid=True), db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
     fact_key = db.Column(db.String(100), nullable=False)
     fact_value = db.Column(db.Text, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

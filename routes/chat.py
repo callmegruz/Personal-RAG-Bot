@@ -11,7 +11,8 @@ from services.rag import retrieve
 from services.audio import transcribe_audio_file
 from services.cognitive import (
     get_installed_models, should_use_rag, load_memory_db, delete_memory_db,
-    maybe_summarise, build_messages, ollama_chat_stream, extract_and_save_memory
+    maybe_summarise, build_messages, ollama_chat_stream, extract_and_save_memory,
+    get_fast_background_model
 )
 
 chat_bp = Blueprint("chat", __name__)
@@ -96,7 +97,10 @@ def clear_history():
         
     try:
         ChatMessage.query.filter_by(conversation_id=session_uuid).delete()
-        Conversation.query.filter_by(id=session_uuid, user_id=uuid.UUID(current_user_id)).delete()
+        conv = Conversation.query.filter_by(id=session_uuid, user_id=uuid.UUID(current_user_id)).first()
+        if conv:
+            conv.summary = ""
+            conv.title = "New Chat"
         db.session.commit()
         return jsonify({"status": "cleared"})
     except Exception as e:
@@ -150,8 +154,19 @@ def chat():
     # 1. Fetch or create Conversation record in database
     conv = Conversation.query.filter_by(id=session_uuid, user_id=user_uuid).first()
     if not conv:
-        conv = Conversation(id=session_uuid, user_id=user_uuid, summary="")
+        conv = Conversation(id=session_uuid, user_id=user_uuid, title="New Chat", summary="")
         db.session.add(conv)
+        db.session.commit()
+
+    # Dynamic Fast Titling fallback (first 5 words of user query)
+    if not conv.title or conv.title == "New Chat":
+        words = user_msg.split()
+        fast_title = " ".join(words[:5])
+        if len(fast_title) > 30:
+            fast_title = fast_title[:28] + "..."
+        if not fast_title:
+            fast_title = "New Chat"
+        conv.title = fast_title
         db.session.commit()
 
     # 2. Fetch history from database
@@ -207,22 +222,27 @@ def chat():
                     db.session.add(assistant_msg_db)
                     db.session.commit()
                     
-                    # Run memory extraction asynchronously in a background thread to prevent blocking the stream response!
+                    # Run memory extraction & title refinement asynchronously in a background thread!
                     import threading
                     from flask import current_app
                     
                     app_instance = current_app._get_current_object()
                     
-                    def run_async_extraction(app, u_msg, r_msg, md, uid):
+                    def run_async_tasks(app, u_msg, r_msg, md, uid, s_id):
                         with app.app_context():
                             try:
                                 extract_and_save_memory(u_msg, r_msg, md, uid)
                             except Exception as ex:
                                 print(f"[ERROR] Asynchronous memory extraction failed: {ex}")
+                            
+                            try:
+                                refine_chat_title(s_id, u_msg, r_msg, md)
+                            except Exception as ex:
+                                print(f"[ERROR] Asynchronous title refinement failed: {ex}")
                                 
                     threading.Thread(
-                        target=run_async_extraction,
-                        args=(app_instance, user_msg, full_response, model, current_user_id),
+                        target=run_async_tasks,
+                        args=(app_instance, user_msg, full_response, model, current_user_id, session_uuid),
                         daemon=True
                     ).start()
                         
@@ -244,3 +264,117 @@ def chat():
         mimetype="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+def refine_chat_title(session_id: uuid.UUID, user_msg: str, assistant_msg: str, model: str):
+    """Asynchronously refine a simple chat title using Ollama."""
+    try:
+        fast_model = get_fast_background_model()
+        conv = Conversation.query.filter_by(id=session_id).first()
+        if not conv:
+            return
+            
+        # Only refine if the conversation has 2 or fewer messages (first exchange)
+        msg_count = ChatMessage.query.filter_by(conversation_id=session_id).count()
+        if msg_count > 2:
+            return
+            
+        prompt = (
+            "You are a helpful assistant. Generate a highly concise title of maximum 4 words "
+            "describing the following user query. Do not use quotes, formatting, or extra words. "
+            "Only return the title.\n\n"
+            f"Query: {user_msg}\n\n"
+            "Title:"
+        )
+        
+        url = f"{config.OLLAMA_URL}/api/generate"
+        payload = {
+            "model": fast_model,
+            "prompt": prompt,
+            "stream": False,
+            "options": {"num_predict": 10}
+        }
+        res = requests.post(url, json=payload, timeout=5)
+        if res.status_code == 200:
+            gen_title = res.json().get("response", "").strip()
+            # Clean quotes
+            gen_title = gen_title.replace('"', '').replace("'", "").strip()
+            if gen_title and len(gen_title) < 50:
+                conv.title = gen_title
+                db.session.commit()
+                print(f"[INFO] Asynchronously refined chat title to: '{gen_title}'")
+    except Exception as e:
+        print(f"[WARNING] Dynamic title refinement failed: {e}")
+
+
+@chat_bp.route("/api/chat/sessions", methods=["GET"])
+@jwt_required()
+def get_chat_sessions():
+    current_user_id = get_jwt_identity()
+    user_uuid = uuid.UUID(current_user_id)
+    
+    try:
+        sessions = Conversation.query.filter_by(user_id=user_uuid).order_by(Conversation.created_at.desc()).all()
+        
+        # Auto-create first default conversation if none exist
+        if not sessions:
+            new_conv = Conversation(user_id=user_uuid, title="New Chat", summary="")
+            db.session.add(new_conv)
+            db.session.commit()
+            sessions = [new_conv]
+            
+        return jsonify([{
+            "id": str(s.id),
+            "title": s.title or "New Chat",
+            "created_at": s.created_at.strftime("%Y-%m-%d %H:%M:%S")
+        } for s in sessions]), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@chat_bp.route("/api/chat/sessions/new", methods=["POST"])
+@jwt_required()
+def create_chat_session():
+    current_user_id = get_jwt_identity()
+    user_uuid = uuid.UUID(current_user_id)
+    
+    try:
+        count = Conversation.query.filter_by(user_id=user_uuid).count()
+        if count >= 5:
+            return jsonify({"error": "Maximum limit of 5 active chats reached. Please delete an existing chat first."}), 400
+            
+        new_conv = Conversation(user_id=user_uuid, title="New Chat", summary="")
+        db.session.add(new_conv)
+        db.session.commit()
+        
+        return jsonify({
+            "id": str(new_conv.id),
+            "title": new_conv.title,
+            "created_at": new_conv.created_at.strftime("%Y-%m-%d %H:%M:%S")
+        }), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@chat_bp.route("/api/chat/sessions/<session_id>", methods=["DELETE"])
+@jwt_required()
+def delete_chat_session(session_id):
+    current_user_id = get_jwt_identity()
+    user_uuid = uuid.UUID(current_user_id)
+    
+    try:
+        try:
+            session_uuid = uuid.UUID(session_id)
+        except ValueError:
+            return jsonify({"error": "Invalid session ID format."}), 400
+            
+        conv = Conversation.query.filter_by(id=session_uuid, user_id=user_uuid).first()
+        if not conv:
+            return jsonify({"error": "Chat session not found or unauthorized."}), 404
+            
+        db.session.delete(conv)
+        db.session.commit()
+        return jsonify({"status": "deleted"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500

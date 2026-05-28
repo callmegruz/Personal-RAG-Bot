@@ -12,11 +12,22 @@
     rel="stylesheet" />
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
   <style>
-    .auth-hidden { display: none !important; }
-    .auth-visible { display: flex !important; }
+    .auth-hidden {
+      display: none !important;
+    }
+
+    .auth-visible {
+      display: flex !important;
+    }
+
     @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
+      0% {
+        transform: rotate(0deg);
+      }
+
+      100% {
+        transform: rotate(360deg);
+      }
     }
   </style>
 </head>
@@ -49,13 +60,15 @@
         <!-- Username/Email (Login Only) -->
         <div id="login-username-group" style="display: flex; flex-direction: column; gap: 6px; position: relative;">
           <label
-            style="font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; font-family: 'JetBrains Mono', monospace;">Username or Email</label>
+            style="font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; font-family: 'JetBrains Mono', monospace;">Username
+            or Email</label>
           <input type="text" id="auth-username" placeholder="Enter username or email..."
             style="background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm); color: var(--text); padding: 10px 14px; font-size: 14px; outline: none; transition: var(--transition); width: 100%; font-family: 'Plus Jakarta Sans', sans-serif;"
             onfocus="onUsernameFocus()" onblur="onUsernameBlur()" autocomplete="off" />
-          
+
           <!-- Recent Usernames Suggestions Dropdown -->
-          <div id="auth-username-suggestions" style="display: none; position: absolute; top: 100%; left: 0; width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm); box-shadow: 0 10px 30px rgba(0,0,0,0.35); z-index: 6000; flex-direction: column; padding: 4px 0; margin-top: 4px; animation: slideIn 0.15s ease;">
+          <div id="auth-username-suggestions"
+            style="display: none; position: absolute; top: 100%; left: 0; width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm); box-shadow: 0 10px 30px rgba(0,0,0,0.35); z-index: 6000; flex-direction: column; padding: 4px 0; margin-top: 4px; animation: slideIn 0.15s ease;">
           </div>
         </div>
 
@@ -113,16 +126,22 @@
         <!-- Role Selector (Register Only) -->
         <div id="register-role-group" style="display: none; flex-direction: column; gap: 6px;">
           <label
-            style="font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; font-family: 'JetBrains Mono', monospace;">Select Role</label>
-          <div style="position: relative; width: 100%; display: flex; align-items: center; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 0 14px; transition: var(--transition);"
-               onfocuswithin="this.style.borderColor='var(--accent)'" onfocusout="this.style.borderColor='var(--border)'">
+            style="font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; font-family: 'JetBrains Mono', monospace;">Select
+            Role</label>
+          <div
+            style="position: relative; width: 100%; display: flex; align-items: center; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 0 14px; transition: var(--transition);"
+            onfocuswithin="this.style.borderColor='var(--accent)'" onfocusout="this.style.borderColor='var(--border)'">
             <select id="auth-role"
               style="background: transparent; border: none; color: var(--text); padding: 10px 24px 10px 0; font-size: 14px; outline: none; width: 100%; font-family: 'Plus Jakarta Sans', sans-serif; height: 42px; cursor: pointer; -webkit-appearance: none; -moz-appearance: none; appearance: none;">
-              <option value="user" selected style="background: var(--surface2); color: var(--text);">User (Standard Access)</option>
-              <option value="admin" style="background: var(--surface2); color: var(--text);">Admin (Maintenance Access)</option>
+              <option value="user" selected style="background: var(--surface2); color: var(--text);">User (Standard
+                Access)</option>
+              <option value="admin" style="background: var(--surface2); color: var(--text);">Admin (Maintenance Access)
+              </option>
             </select>
             <!-- Sleek CSS Chevron Arrow -->
-            <div style="position: absolute; right: 14px; width: 6px; height: 6px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg); pointer-events: none; margin-top: -3px;"></div>
+            <div
+              style="position: absolute; right: 14px; width: 6px; height: 6px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg); pointer-events: none; margin-top: -3px;">
+            </div>
           </div>
         </div>
       </div>
@@ -312,8 +331,34 @@
           </button>
         </div>
       </div>
-      <div id="mem-list">
+      <div id="mem-list" style="max-height: 180px; overflow-y: auto;">
         <div class="mem-empty">No facts yet.</div>
+      </div>
+
+      <!-- ACTIVE CHATS SECTION -->
+      <div class="sb-section"
+        style="border-top: 1px solid var(--border); flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+        <div class="sb-title" style="padding:14px 14px 8px; flex-shrink: 0;">
+          <span style="display:flex;align-items:center;gap:6px;">
+            <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+            <span>ACTIVE CHATS</span>
+          </span>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span id="chat-count"
+              style="color:var(--muted); font-size:10px; font-family:'JetBrains Mono',monospace;">0/5</span>
+            <button class="btn-icon" onclick="createNewChat()" title="New Chat" style="width:20px; height:20px;">
+              <svg viewBox="0 0 24 24" width="10" height="10" stroke="currentColor" stroke-width="2.5" fill="none">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div id="chat-session-list" style="flex: 1; overflow-y: auto; padding: 0 0 12px 0;">
+          <div class="doc-empty">No active chats.</div>
+        </div>
       </div>
     </div>
 
@@ -425,11 +470,13 @@
     <div class="modal-card">
       <div class="modal-header">
         <h3 class="modal-title" style="display:flex;align-items:center;gap:8px;margin:0;">
-          <svg viewBox="0 0 24 24" width="16" height="16" stroke="var(--danger)" stroke-width="2.5" fill="none">
-            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-            <line x1="12" y1="9" x2="12" y2="13"></line>
-            <line x1="12" y1="17" x2="12.01" y2="17"></line>
-          </svg>
+          <span id="modal-icon-container" style="display:inline-flex; align-items:center; justify-content:center;">
+            <svg viewBox="0 0 24 24" width="16" height="16" stroke="var(--danger)" stroke-width="2.5" fill="none">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+              <line x1="12" y1="9" x2="12" y2="13"></line>
+              <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+          </span>
           <span id="modal-title-text">Confirm Action</span>
         </h3>
         <button class="modal-close" onclick="closeModal()">&times;</button>
