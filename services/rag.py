@@ -194,6 +194,17 @@ def count_user_chunks(user_id: str) -> int:
     return 0
 
 
+def get_user_documents_and_chunks(user_id: str) -> tuple:
+    """Gets all indexed document sources and total chunks for a user in a single query."""
+    if collection.count() == 0:
+        return [], 0
+    results = collection.get(where={"user_id": user_id}, include=["metadatas"])
+    if not results or not results.get("metadatas"):
+        return [], 0
+    sources = sorted({m["source"] for m in results["metadatas"] if m and "source" in m})
+    return sources, len(results["metadatas"])
+
+
 def delete_document(filename: str, user_id: str):
     """Deletes all chunks/embeddings related to a specific file and user."""
     results = collection.get(where={"$and": [{"source": filename}, {"user_id": user_id}]})

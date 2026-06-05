@@ -3,7 +3,8 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 import config
 from services.rag import (
-    list_documents, ingest_document, delete_document, secure_filename_hash, count_user_chunks
+    list_documents, ingest_document, delete_document, secure_filename_hash,
+    count_user_chunks, get_user_documents_and_chunks
 )
 
 doc_bp = Blueprint("documents", __name__)
@@ -12,9 +13,10 @@ doc_bp = Blueprint("documents", __name__)
 @jwt_required()
 def get_documents():
     current_user_id = get_jwt_identity()
+    docs, total_chunks = get_user_documents_and_chunks(current_user_id)
     return jsonify({
-        "documents": list_documents(current_user_id), 
-        "total_chunks": count_user_chunks(current_user_id)
+        "documents": docs, 
+        "total_chunks": total_chunks
     })
 
 

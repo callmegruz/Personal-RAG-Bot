@@ -9,6 +9,8 @@ DATABASE_URL = os.getenv(
     "postgresql://postgres:postgres_password@localhost:5432/rag_db"
 )
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "super-secret-key-must-be-at-least-32-characters-long-for-hmac-sha256")
+if len(JWT_SECRET_KEY) < 32:
+    JWT_SECRET_KEY = JWT_SECRET_KEY.ljust(32, "x")
 UPLOAD_FOLDER = "uploads"
 MAX_CONTENT_LENGTH = 10 * 1024 * 1024  # 10MB maximum upload limit
 

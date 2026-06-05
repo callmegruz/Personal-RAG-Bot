@@ -37,10 +37,42 @@ def list_users():
             return jsonify({"error": "Admin privilege required"}), 403
             
         users = User.query.order_by(User.created_at.desc()).all()
-        user_list = []
         
+        # Optimize 1: Fetch conversation counts grouped by user_id in one database query (fixes SQL N+1)
+        from sqlalchemy import func
+        conv_counts = dict(
+            db.session.query(Conversation.user_id, func.count(Conversation.id))
+            .group_by(Conversation.user_id)
+            .all()
+        )
+        
+        # Optimize 2: Fetch all user documents and chunk counts from ChromaDB in a single query (fixes Chroma N+1)
+        user_docs = {}
+        user_chunks = {}
+        try:
+            if collection.count() > 0:
+                all_chunks = collection.get(include=["metadatas"])
+                if all_chunks and all_chunks.get("metadatas"):
+                    for m in all_chunks["metadatas"]:
+                        if m:
+                            u_id = m.get("user_id")
+                            source = m.get("source")
+                            if u_id:
+                                if u_id not in user_docs:
+                                    user_docs[u_id] = set()
+                                if source:
+                                    user_docs[u_id].add(source)
+                                user_chunks[u_id] = user_chunks.get(u_id, 0) + 1
+        except Exception as ce:
+            print(f"[ERROR] Failed to batch fetch ChromaDB stats: {ce}")
+            
+        user_list = []
         for u in users:
             str_id = str(u.id)
+            docs = sorted(list(user_docs.get(str_id, [])))
+            chunks_count = user_chunks.get(str_id, 0)
+            c_count = conv_counts.get(u.id, 0)
+            
             user_list.append({
                 "id": str_id,
                 "username": u.username,
@@ -49,9 +81,9 @@ def list_users():
                 "email": u.email or "",
                 "role": u.role,
                 "created_at": u.created_at.strftime("%Y-%m-%d %H:%M:%S"),
-                "conv_count": Conversation.query.filter_by(user_id=u.id).count(),
-                "doc_count": len(list_documents(str_id)),
-                "chunk_count": count_user_chunks(str_id)
+                "conv_count": c_count,
+                "doc_count": len(docs),
+                "chunk_count": chunks_count
             })
             
         return jsonify({"users": user_list})

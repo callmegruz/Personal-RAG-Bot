@@ -1324,7 +1324,7 @@ function onUsernameFocus() {
         e.preventDefault();
         input.value = user;
         dropdown.style.display = 'none';
-        document.getElementById('auth-password').focus();
+        document.getElementById('auth-login-password').focus();
       };
       
       dropdown.appendChild(item);
@@ -1355,8 +1355,10 @@ function toggleAuthMode(e) {
   document.getElementById('auth-error').style.display = 'none';
 
   const loginGroup = document.getElementById('login-username-group');
+  const loginPasswordGroup = document.getElementById('login-password-group');
   const regNameGroup = document.getElementById('register-name-group');
   const regEmailGroup = document.getElementById('register-email-group');
+  const regPasswordGroup = document.getElementById('register-password-group');
   const regConfirmGroup = document.getElementById('register-confirm-password-group');
   const regRoleGroup = document.getElementById('register-role-group');
 
@@ -1368,8 +1370,10 @@ function toggleAuthMode(e) {
     toggleLink.textContent = "Sign Up";
 
     if (loginGroup) loginGroup.style.display = 'flex';
+    if (loginPasswordGroup) loginPasswordGroup.style.display = 'flex';
     if (regNameGroup) regNameGroup.style.display = 'none';
     if (regEmailGroup) regEmailGroup.style.display = 'none';
+    if (regPasswordGroup) regPasswordGroup.style.display = 'none';
     if (regConfirmGroup) regConfirmGroup.style.display = 'none';
     if (regRoleGroup) regRoleGroup.style.display = 'none';
   } else {
@@ -1380,8 +1384,10 @@ function toggleAuthMode(e) {
     toggleLink.textContent = "Sign In";
 
     if (loginGroup) loginGroup.style.display = 'none';
+    if (loginPasswordGroup) loginPasswordGroup.style.display = 'none';
     if (regNameGroup) regNameGroup.style.display = 'flex';
     if (regEmailGroup) regEmailGroup.style.display = 'flex';
+    if (regPasswordGroup) regPasswordGroup.style.display = 'flex';
     if (regConfirmGroup) regConfirmGroup.style.display = 'flex';
     if (regRoleGroup) regRoleGroup.style.display = 'flex';
   }
@@ -1397,7 +1403,7 @@ async function submitAuth() {
 
   if (isAuthModeLogin) {
     const username = document.getElementById('auth-username').value.trim();
-    const password = document.getElementById('auth-password').value.trim();
+    const password = document.getElementById('auth-login-password').value.trim();
 
     if (!username || !password) {
       errorDiv.style.display = 'flex';
@@ -1409,7 +1415,7 @@ async function submitAuth() {
     const firstName = document.getElementById('auth-first-name').value.trim();
     const lastName = document.getElementById('auth-last-name').value.trim();
     const email = document.getElementById('auth-email').value.trim();
-    const password = document.getElementById('auth-password').value.trim();
+    const password = document.getElementById('auth-register-password').value.trim();
     const confirmPassword = document.getElementById('auth-confirm-password').value.trim();
     const role = document.getElementById('auth-role').value.trim();
 
@@ -1487,7 +1493,8 @@ async function submitAuth() {
       document.getElementById('auth-first-name').value = '';
       document.getElementById('auth-last-name').value = '';
       document.getElementById('auth-email').value = '';
-      document.getElementById('auth-password').value = '';
+      document.getElementById('auth-login-password').value = '';
+      document.getElementById('auth-register-password').value = '';
       document.getElementById('auth-confirm-password').value = '';
       document.getElementById('auth-role').value = 'user';
       
