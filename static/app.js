@@ -1498,11 +1498,11 @@ async function submitAuth() {
       document.getElementById('auth-confirm-password').value = '';
       document.getElementById('auth-role').value = 'user';
       
+      // Show the custom alert modal
+      await showAlert("Sign Up Successful", "User has been successfully created", true);
+
       isAuthModeLogin = true;
       toggleAuthMode();
-      
-      // Show the custom alert modal
-      showAlert("Sign Up Successful", "Your local account has been registered successfully! You can now sign in using your credentials.", true);
     }
   } catch (err) {
     errorDiv.style.display = 'flex';
